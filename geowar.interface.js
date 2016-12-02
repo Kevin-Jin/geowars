@@ -2,7 +2,7 @@ var squareSize = 6;
 var colors = [ 'red', 'blue' ];
 var names = [ 'Red', 'Blue' ];
 
-var Controller = function($canvas, model) {
+var Controller = function($canvas, model, view) {
 	var controller = this;
 	controller.mousePos = [ -1, -1 ];
 	controller.mouseBtn = [ false, false, false ];
@@ -43,23 +43,23 @@ var Controller = function($canvas, model) {
 	});
 
 	controller.refreshIntervalId;
-	
 	$('#newgame').on('click', function(e) {
-		//Stop Previous Timer
+		// Stop previous timer.
 		clearInterval(controller.refreshIntervalId);
-		
+
+		view.reset();
 		model.reset();
-		
-		//Initialize for resets
+
+		// Initialize for resets.
 		$('#clockR').html('0' + Math.floor(model.time[0] / 60) + ':' + (model.time[0] % 60 < 10? '0':'') + (model.time[0] % 60));
 		$('#clockB').html('0' + Math.floor(model.time[1] / 60) + ':' + (model.time[1] % 60 < 10? '0':'') + (model.time[1] % 60));
-				
-		//Start Timer
+
+		// Start timer.
 		controller.refreshIntervalId = setInterval(function () {
-			if(!model.gameOver()) {
+			if (!model.gameOver()) {
 				model.updateTime();
-							
-				/*Figure out which clock to update: 0 = Red, 1 = Blue*/
+
+				// Figure out which clock to update: 0 = Red, 1 = Blue.
 				$('#clockR').html('0' + Math.floor(model.time[0] / 60) + ':' + (model.time[0] % 60 < 10? '0':'') + (model.time[0] % 60));
 				$('#clockB').html('0' + Math.floor(model.time[1] / 60) + ':' + (model.time[1] % 60 < 10? '0':'') + (model.time[1] % 60));
 			}
@@ -129,6 +129,10 @@ Controller.prototype.beginFrame = function($canvas, ctx, model) {
 };
 
 var View = function() {
+	this.reset();
+};
+
+View.prototype.reset = function() {
 	this.gameEnd = -1;
 };
 
@@ -161,24 +165,21 @@ View.prototype.makeCameraInvertible = function(ctx) {
 
 View.prototype.render = function($canvas, ctx, model, controller) {
 	function renderSequence(last, now) {
-		if (now[0] == last[0]) {
-			// Vertical sequence of blocks.
+		var dir = model.getRayDirection(last, now);
+		if (dir == DIR_VERTICAL) {
 			if (now[1] > last[1])
 				ctx.rect(ctx.lineWidth + last[0] * squareSize, ctx.lineWidth + (last[1] + 1) * squareSize, squareSize - ctx.lineWidth, (now[1] - last[1]) * squareSize - ctx.lineWidth);
 			else
 				ctx.rect(ctx.lineWidth + now[0] * squareSize, ctx.lineWidth + now[1] * squareSize, squareSize - ctx.lineWidth, (last[1] - now[1]) * squareSize - ctx.lineWidth);
-		} else if (now[1] == last[1]) {
-			// Horizontal sequence of blocks.
+		} else if (dir == DIR_HORIZONTAL) {
 			if (now[0] > last[0])
 				ctx.rect(ctx.lineWidth + (last[0] + 1) * squareSize, ctx.lineWidth + last[1] * squareSize, (now[0] - last[0]) * squareSize - ctx.lineWidth, squareSize - ctx.lineWidth);
 			else
 				ctx.rect(ctx.lineWidth + now[0] * squareSize, ctx.lineWidth + now[1] * squareSize, (last[0] - now[0]) * squareSize - ctx.lineWidth, squareSize - ctx.lineWidth);
-		} else if (now[0] - last[0] == now[1] - last[1]) {
-			// Diagonal sequence of blocks.
+		} else if (dir == DIR_RDIAGONAL) {
 			for (var j = now[0] - last[0], inc = now[0] > last[0] ? -1 : +1; j != 0; j += inc)
 				ctx.rect(ctx.lineWidth + (last[0] + j) * squareSize, ctx.lineWidth + (last[1] + j) * squareSize, squareSize - ctx.lineWidth, squareSize - ctx.lineWidth);
-		} else if (now[0] - last[0] == -(now[1] - last[1])) {
-			// Diagonal sequence of blocks.
+		} else if (dir == DIR_LDIAGONAL) {
 			for (var j = now[0] - last[0], inc = now[0] > last[0] ? -1 : +1; j != 0; j += inc)
 				ctx.rect(ctx.lineWidth + (last[0] + j) * squareSize, ctx.lineWidth + (last[1] - j) * squareSize, squareSize - ctx.lineWidth, squareSize - ctx.lineWidth);
 		}
@@ -208,7 +209,7 @@ View.prototype.render = function($canvas, ctx, model, controller) {
 	ctx.fill();
 
 	// Color in squares.
-	for (var player = 0; player < 2; player++) {
+	for (var player = 0; player < model.states.length; player++) {
 		var history = model.states[player];
 		var last = history[0];
 		ctx.fillStyle = colors[player];
@@ -269,8 +270,6 @@ View.prototype.render = function($canvas, ctx, model, controller) {
 		renderSquare(last);
 		ctx.stroke();
 		ctx.globalAlpha = 1;
-		
-		this.gameEnd = -1;
 	} else {
 		ctx.strokeStyle = 'white';
 		ctx.beginPath();
@@ -282,10 +281,10 @@ View.prototype.render = function($canvas, ctx, model, controller) {
 
 		var freeze = 2000, fadeOut = 500, initAlpha = 0.5;
 		var text = 'Game over!';
-		
-		if(model.turn == - model.states.length - 1) 
+
+		if (model.turn == -(model.states.length + 1))
 			text = '';
-					
+
 		if (this.gameEnd == -1)
 			this.gameEnd = t;
 		if (t < this.gameEnd + freeze + fadeOut) {
@@ -317,28 +316,27 @@ View.prototype.render = function($canvas, ctx, model, controller) {
 
 	switch (now ? now[2] : -1) {
 		case LEGAL:
-			$('#tip').html('You are drawing a ray of length ' + Math.max(Math.abs(now[0] - last[0]), Math.abs(now[1] - last[1])));
+			$('#tip').html('You are drawing a ray of length ' + model.getRayLength(last, now));
 			break;
 		case ILL_BLOCKED:
 			$('#tip').html('You cannot intersect another ray');
 			break;
 		case ILL_DIAGONAL:
-			$('#tip').html('You cannot make more than two diagonal moves');
+			$('#tip').html('You cannot draw more than ' + model.DIAG_MAX + ' diagonal rays');
 			break;
 		case ILL_MIN:
-			$('#tip').html('You cannot create a continuing ray less than ' + model.CONT_MIN + ' squares');
+			$('#tip').html('You cannot draw a continuing ray shorter than ' + model.CONT_MIN + ' squares');
 			break;
 		case ILL_DIRECTION:
-			$('#tip').html('You cannot make a move in that direction');
+			$('#tip').html('You cannot draw a ray in that direction');
 			break;
 		case -1:
-			if (model.gameOver()) {
-				if(model.turn == - model.states.length - 1) {
-					$('#tip').html('Please Start a New Game!');
-				} else {
+			if (model.gameOver())
+				if(model.turn == -(model.states.length + 1))
+					$('#tip').html('Please start a new game!');
+				else
 					$('#tip').html(names[-model.turn - 1] + ' won the game!');
-				}
-			} else
+			else
 				$('#tip').html('&nbsp;');
 			break;
 	}
@@ -347,16 +345,16 @@ View.prototype.render = function($canvas, ctx, model, controller) {
 $(document).ready(function() {
 	var $canvas = $('#game');
 	var model = new Model();
-	
-	//Create a dead game
-	model.turn = - model.states.length - 1;
-	
-	//Set Time Initially
+
+	// Create a dead game.
+	model.turn = -(model.states.length + 1);
+
+	// Set time initially.
 	$('#clockR').html('0' + Math.floor(model.time[0] / 60) + ':' + (model.time[0] % 60 < 10? '0':'') + (model.time[0] % 60));
 	$('#clockB').html('0' + Math.floor(model.time[1] / 60) + ':' + (model.time[1] % 60 < 10? '0':'') + (model.time[1] % 60));
-				
+
 	var view = new View();
-	var controller = new Controller($canvas, model);
+	var controller = new Controller($canvas, model, view);
 
 	var ctx = $canvas[0].getContext('2d');
 	view.makeCameraInvertible(ctx);

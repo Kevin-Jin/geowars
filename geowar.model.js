@@ -5,16 +5,20 @@ var ILL_DIAGONAL = 2;
 var ILL_DIRECTION = 3;
 var ILL_MIN = 4;
 
-var VERTICAL = 0;
-var HORIZONTAL = 1;
-var RDIAGONAL = 2;
-var LDIAGONAL = 3;
+var DIR_INVALID = -2;
+var DIR_NONE = -1;
+var DIR_VERTICAL = 0;
+var DIR_HORIZONTAL = 1;
+var DIR_RDIAGONAL = 2;
+var DIR_LDIAGONAL = 3;
 
 var Model = function() {
 	this.reset();
-	
-	//Min for Continuing Line 
+
+	// Min for continuing line.
 	this.CONT_MIN = 10;
+	this.DIAG_MAX = 2;
+	this.TIME_LIMIT = 120;
 };
 
 Model.prototype.gameOver = function() {
@@ -26,10 +30,9 @@ Model.prototype.reset = function() {
 	this.turn = 0;
 	this.candidate = null;
 	this.diagonals = [ 0, 0 ];
+	this.direction = [ -1, -1 ];
+	this.time = [ this.TIME_LIMIT, this.TIME_LIMIT ];
 	this.grid = [ ];
-	
-	this.direction = [-1, -1];
-	
 	for (var i = 0; i < gridHeight; i++) {
 		this.grid[i] = [ ];
 		for (var j = 0; j < gridWidth; j++)
@@ -37,17 +40,14 @@ Model.prototype.reset = function() {
 	}
 	this.grid[this.states[0][0][1]][this.states[0][0][0]] = 0;
 	this.grid[this.states[1][0][1]][this.states[1][0][0]] = 1;
-	
-	/*Time Limit*/
-	this.time = [120, 120];
 };
 
 Model.prototype.updateTime = function() {
 	this.time[this.turn]--;
-	
-	/*End game if time reaches 0*/
-	if(this.time[this.turn] == 0)
-		this.turn = -((this.turn + 1) % 2 + 1);
+
+	// End game if time reaches 0.
+	if (this.time[this.turn] == 0)
+		this.turn = -((this.turn + 1) % this.states.length + 1);
 };
 
 Model.prototype.getPlayerLastMove = function(p) {
@@ -58,64 +58,68 @@ Model.prototype.getCurrentPlayerLastMove = function() {
 	return this.getPlayerLastMove(this.turn);
 };
 
+Model.prototype.getRayDirection = function(last, now) {
+	last = last || this.getCurrentPlayerLastMove();
+	now = now || this.candidate;
+	if (now[0] == last[0] && now[1] == last[1])
+		return DIR_NONE;
+	else if (now[0] == last[0])
+		return DIR_VERTICAL;
+	else if (now[1] == last[1])
+		return DIR_HORIZONTAL;
+	else if (now[0] - last[0] == now[1] - last[1])
+		return DIR_RDIAGONAL;
+	else if (now[0] - last[0] == -(now[1] - last[1]))
+		return DIR_LDIAGONAL;
+	else
+		return DIR_INVALID;
+};
+
+Model.prototype.getRayLength = function(last, now) {
+	last = last || this.getCurrentPlayerLastMove();
+	now = now || this.candidate;
+	return Math.max(Math.abs(now[0] - last[0]), Math.abs(now[1] - last[1]));
+};
+
 Model.prototype.checkLegality = function() {
 	if (this.gameOver())
 		return false;
 
 	var last = this.getCurrentPlayerLastMove();
 	var now = this.candidate;
-	if (now[0] == last[0] && now[1] == last[1]) {
+	var dir = this.getRayDirection(last, now);
+	if (dir == DIR_NONE) {
 		return ILL_BLOCKED;
-	} else if (now[0] == last[0]) {
-		// Vertical sequence of blocks.
+	} else if (dir == DIR_VERTICAL) {
 		for (var j = now[1] - last[1], inc = now[1] > last[1] ? -1 : +1; j != 0; j += inc)
 			if (this.grid[last[1] + j][last[0]] != -1)
 				return ILL_BLOCKED;	
-			
-		//Continuing Line
-		if(this.direction[this.turn] == VERTICAL && Math.abs(now[1] - last[1]) < this.CONT_MIN) {
-			return ILL_MIN;
-		}
-	} else if (now[1] == last[1]) {
-		// Horizontal sequence of blocks.
+	} else if (dir == DIR_HORIZONTAL) {
 		for (var j = now[0] - last[0], inc = now[0] > last[0] ? -1 : +1; j != 0; j += inc)
 			if (this.grid[last[1]][last[0] + j] != -1)
 				return ILL_BLOCKED;
-			
-		//Continuing Line
-		if(this.direction[this.turn] == HORIZONTAL && Math.abs(now[0] - last[0]) < this.CONT_MIN) {
-			return ILL_MIN;
-		}
-		
-	} else if (now[0] - last[0] == now[1] - last[1]) {
-		if (this.diagonals[this.turn] >= 2)
-			return ILL_DIAGONAL;
-		// Diagonal sequence of blocks.
+	} else if (dir == DIR_RDIAGONAL) {
 		for (var j = now[0] - last[0], inc = now[0] > last[0] ? -1 : +1; j != 0; j += inc)
 			if (this.grid[last[1] + j][last[0] + j] != -1)
 				return ILL_BLOCKED;
-			
-		//Continuing Line: 1 - 1
-		if(this.direction[this.turn] == RDIAGONAL && Math.abs(now[0] - last[0]) < this.CONT_MIN) {
-			return ILL_MIN;
-		}
-		
-	} else if (now[0] - last[0] == -(now[1] - last[1])) {
-		if (this.diagonals[this.turn] >= 2)
+
+		if (this.diagonals[this.turn] >= this.DIAG_MAX)
 			return ILL_DIAGONAL;
-		// Diagonal sequence of blocks.
+	} else if (dir == DIR_LDIAGONAL) {
 		for (var j = now[0] - last[0], inc = now[0] > last[0] ? -1 : +1; j != 0; j += inc)
 			if (this.grid[last[1] - j][last[0] + j] != -1)
 				return ILL_BLOCKED;
-			
-		//Continuing Line: 1 - 1
-		if(this.direction[this.turn] == LDIAGONAL && Math.abs(now[0] - last[0]) < this.CONT_MIN) {
-			return ILL_MIN;
-		}
-		
+
+		if (this.diagonals[this.turn] >= this.DIAG_MAX)
+			return ILL_DIAGONAL;
 	} else {
 		return ILL_DIRECTION;
 	}
+
+	// Continuing line.
+	if (this.direction[this.turn] == dir && this.getRayLength(last, now) < this.CONT_MIN)
+		return ILL_MIN;
+
 	return LEGAL;
 };
 
@@ -134,14 +138,15 @@ Model.prototype.updateCandidate = function(hoverSquare) {
 	
 	// Fuzzy matching. Set candidate to the valid ray that minimizes the
 	//  perpendicular distance to hoverSquare.
+	var dir = DIR_INVALID;
 	if ((angle > +0 * Math.PI / 1 - TOLERANCE && angle < +0 * Math.PI / 1 + TOLERANCE) || (angle > +1 * Math.PI / 1 - TOLERANCE || angle < -1 * Math.PI / 1 + TOLERANCE)) {
-		// Vertical ray.
+		dir = DIR_VERTICAL;
 		this.candidate = [ last[0], hoverSquare[1] ];
 	} else if ((angle > +1 * Math.PI / 2 - TOLERANCE && angle < +1 * Math.PI / 2 + TOLERANCE) || (angle > -1 * Math.PI / 2 - TOLERANCE && angle < -1 * Math.PI / 2 + TOLERANCE)) {
-		// Horizontal ray.
+		dir = DIR_HORIZONTAL;
 		this.candidate = [ hoverSquare[0], last[1] ];
 	} else if ((angle > +1 * Math.PI / 4 - TOLERANCE && angle < +1 * Math.PI / 4 + TOLERANCE) || (angle > -3 * Math.PI / 4 - TOLERANCE && angle < -3 * Math.PI / 4 + TOLERANCE)) {
-		// Diagonal ray.
+		dir = DIR_RDIAGONAL;
 		// Intersection of diagonal through last and and anti-diagonal through hoverSquare.
 		var hIntersectY = hoverSquare[1];
 		var yDist = hIntersectY - last[1];
@@ -156,7 +161,7 @@ Model.prototype.updateCandidate = function(hoverSquare) {
 		legDist = Math.min(legDist, gridWidth - hIntersectX - 1, gridHeight - hIntersectY - 1);
 		this.candidate = [ hIntersectX + legDist, hIntersectY + legDist ];
 	} else if ((angle > -1 * Math.PI / 4 - TOLERANCE && angle < -1 * Math.PI / 4 + TOLERANCE) || (angle > +3 * Math.PI / 4 - TOLERANCE && angle < +3 * Math.PI / 4 + TOLERANCE)) {
-		// Anti-diagonal ray.
+		dir = DIR_LDIAGONAL;
 		// Intersection of anti-diagonal through last and diagonal through hoverSquare.
 		var hIntersectY = hoverSquare[1];
 		var yDist = hIntersectY - last[1];
@@ -172,6 +177,11 @@ Model.prototype.updateCandidate = function(hoverSquare) {
 	} else {
 		this.candidate = null;
 		return;
+	}
+
+	if (this.getRayLength(last) != 0 && this.getRayDirection(last) != dir) {
+		console.log(this.getRayDirection(last) + " " + dir);
+		throw new Error('Assert failed: this.getRayDirection() != dir');
 	}
 
 	this.candidate[2] = this.checkLegality();
@@ -191,6 +201,12 @@ Model.prototype.selectCandidate = function() {
 					continue;
 
 				model.candidate = [ last[0] + dx, last[1] + dy ];
+				if (model.getRayDirection(last) == model.direction[model.turn]) {
+					if (last[0] + dx * model.CONT_MIN < 0 || last[0] + dx * model.CONT_MIN >= gridWidth || last[1] + dy * model.CONT_MIN < 0 || last[1] + dy * model.CONT_MIN >= gridHeight)
+						continue;
+
+					model.candidate = [ last[0] + dx * model.CONT_MIN, last[1] + dy * model.CONT_MIN ];
+				}
 				if (model.checkLegality() == LEGAL)
 					return true;
 			}
@@ -203,35 +219,29 @@ Model.prototype.selectCandidate = function() {
 
 	var last = this.getCurrentPlayerLastMove();
 	var now = this.candidate;
-	if (now[0] == last[0]) {
-		this.direction[this.turn] = VERTICAL;
-		// Vertical sequence of blocks.
+	var dir = this.getRayDirection(last, now);
+	if (dir == DIR_VERTICAL) {
 		for (var j = now[1] - last[1], inc = now[1] > last[1] ? -1 : +1; j != 0; j += inc)
 			this.grid[last[1] + j][last[0]] = this.turn;
-	} else if (now[1] == last[1]) {
-		this.direction[this.turn] = HORIZONTAL;
-		// Horizontal sequence of blocks.
+	} else if (dir == DIR_HORIZONTAL) {
 		for (var j = now[0] - last[0], inc = now[0] > last[0] ? -1 : +1; j != 0; j += inc)
 			this.grid[last[1]][last[0] + j] = this.turn;
-	} else if (now[0] - last[0] == now[1] - last[1]) {
-		this.direction[this.turn] = RDIAGONAL;
-		// Diagonal sequence of blocks.
+	} else if (dir == DIR_RDIAGONAL) {
 		this.diagonals[this.turn]++;
 		for (var j = now[0] - last[0], inc = now[0] > last[0] ? -1 : +1; j != 0; j += inc)
 			this.grid[last[1] + j][last[0] + j] = this.turn;
-	} else if (now[0] - last[0] == -(now[1] - last[1])) {
-		this.direction[this.turn] = LDIAGONAL;
-		// Diagonal sequence of blocks.
+	} else if (dir == DIR_LDIAGONAL) {
 		this.diagonals[this.turn]++;
 		for (var j = now[0] - last[0], inc = now[0] > last[0] ? -1 : +1; j != 0; j += inc)
 			this.grid[last[1] - j][last[0] + j] = this.turn;
 	}
+	this.direction[this.turn] = dir;
 
 	this.states[this.turn].push(this.candidate);
-	this.turn = (this.turn + 1) % 2;
+	this.turn = (this.turn + 1) % this.states.length;
 
 	if (!hasValidMove(this))
-		this.turn = -((this.turn + 1) % 2 + 1);
+		this.turn = -((this.turn + 1) % this.states.length + 1);
 	this.candidate = null;
 
 	return true;
