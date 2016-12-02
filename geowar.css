@@ -1,0 +1,10 @@
+#game {
+	margin: 1px;
+	border: 1px solid white;
+	padding: 1px;
+	display: block;
+}
+
+#newgame {
+	display: block;
+}
