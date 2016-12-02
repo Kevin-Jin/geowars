@@ -34,13 +34,23 @@
 			<hr>
 			
 			<div class='timer'>Blue P2: 
-				<button class='small-button'>Human</button>
+				<button class='small-button'>Bot</button>
 			</div>
 			<span id="clockB" class='display'></span>
 			
 			<hr>
 			
-			<p> Instructions: </p>
+			<div id='rules'>
+				Game Rules:
+				<ol id='rule-list'> 
+					<li>Grid Size: 100 x 100.</li>
+					<li>Players take turns to draw a line segment from the last point.</li>
+					<li>Only two diagonal segments are permitted per player.</li>
+					<li>Extending the previous line must be at least by 10 units</li>
+					<li>The first player who cannot draw  segment loses.</li>
+					<li>Each ray cannot intersect another colored ray.</li>
+				</ol>
+			</div>
 		</div>
 	</div>
 	

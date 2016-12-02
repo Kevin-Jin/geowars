@@ -350,8 +350,8 @@ $(document).ready(function() {
 	model.turn = -(model.states.length + 1);
 
 	// Set time initially.
-	$('#clockR').html('0' + Math.floor(model.time[0] / 60) + ':' + (model.time[0] % 60 < 10? '0':'') + (model.time[0] % 60));
-	$('#clockB').html('0' + Math.floor(model.time[1] / 60) + ':' + (model.time[1] % 60 < 10? '0':'') + (model.time[1] % 60));
+	$('#clockR').html('0' + Math.floor(model.TIME_LIMIT / 60) + ':' + (model.TIME_LIMIT % 60 < 10? '0':'') + (model.TIME_LIMIT % 60));
+	$('#clockB').html('0' + Math.floor(model.TIME_LIMIT / 60) + ':' + (model.TIME_LIMIT % 60 < 10? '0':'') + (model.TIME_LIMIT % 60));
 
 	var view = new View();
 	var controller = new Controller($canvas, model, view);

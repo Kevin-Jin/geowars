@@ -72,6 +72,27 @@
 	box-shadow: 0 2px 2px grey;
 }
 
+#rules {
+	padding: 5px;
+	margin: 10px;
+	border: 1px solid grey;
+	font-size: 15px;
+	font-family: 'Arial', cursive;
+	font-weight: bold;
+	text-shadow: 0 1px 0 white;
+	text-decoration: none;
+	color: black;
+}
+
+#rule-list {
+	padding-left: 20px;
+	margin-top: 0px;
+}
+
+li{
+  margin: 5px 0;
+}
+
 .timer {
 	margin: 15px;
 	font-size: 20px;
