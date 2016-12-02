@@ -42,9 +42,30 @@ var Controller = function($canvas, model) {
 		e.preventDefault();
 	});
 
+	controller.refreshIntervalId;
+	
 	$('#newgame').on('click', function(e) {
+		//Stop Previous Timer
+		clearInterval(controller.refreshIntervalId);
+		
 		model.reset();
+		
+		//Initialize for resets
+		$('#clockR').html('0' + Math.floor(model.time[0] / 60) + ':' + (model.time[0] % 60 < 10? '0':'') + (model.time[0] % 60));
+		$('#clockB').html('0' + Math.floor(model.time[1] / 60) + ':' + (model.time[1] % 60 < 10? '0':'') + (model.time[1] % 60));
+				
+		//Start Timer
+		controller.refreshIntervalId = setInterval(function () {
+			if(!model.gameOver()) {
+				model.updateTime();
+							
+				/*Figure out which clock to update: 0 = Red, 1 = Blue*/
+				$('#clockR').html('0' + Math.floor(model.time[0] / 60) + ':' + (model.time[0] % 60 < 10? '0':'') + (model.time[0] % 60));
+				$('#clockB').html('0' + Math.floor(model.time[1] / 60) + ':' + (model.time[1] % 60 < 10? '0':'') + (model.time[1] % 60));
+			}
+		}, 1000);
 	});
+	
 };
 
 Controller.prototype.endFrame = function() {
@@ -52,6 +73,7 @@ Controller.prototype.endFrame = function() {
 };
 
 Controller.prototype.beginFrame = function($canvas, ctx, model) {
+	
 	var customCursor = false;
 	if (this.mouseBtn[2]) {
 		var pt = ctx.transformedPoint(this.mousePos);
@@ -173,14 +195,14 @@ View.prototype.render = function($canvas, ctx, model, controller) {
 	// Draw dead space.
 	var topLeft = ctx.transformedPoint([ 0, 0 ]);
 	var bottomRight = ctx.transformedPoint([ $canvas[0].width, $canvas[0].height ]);
-	ctx.fillStyle = 'black';
+	ctx.fillStyle = 'white';
 	ctx.beginPath();
 	ctx.rect(topLeft[0], topLeft[1], bottomRight[0] - topLeft[0], bottomRight[1] - topLeft[1]);
 	ctx.fill();
 
 	// Draw grid background.
 	ctx.lineWidth = 1;
-	ctx.fillStyle = '#A0522D';
+	ctx.fillStyle = 'black';
 	ctx.beginPath();
 	ctx.rect(ctx.lineWidth, ctx.lineWidth, gridHeight * squareSize - ctx.lineWidth, gridWidth * squareSize - ctx.lineWidth);
 	ctx.fill();
@@ -199,6 +221,7 @@ View.prototype.render = function($canvas, ctx, model, controller) {
 		}
 		ctx.fill();
 	}
+	
 	var last = model.gameOver() ? null : model.getCurrentPlayerLastMove();
 	var now = model.candidate;
 	var t = new Date().getTime();
@@ -218,7 +241,8 @@ View.prototype.render = function($canvas, ctx, model, controller) {
 		ctx.globalAlpha = 1;
 	}
 
-	ctx.strokeStyle = '#8B4513';
+	ctx.strokeStyle = '#0c0c0c';
+	
 	// Draw horizontal grid lines.
 	for (var i = 0; i <= gridHeight; i++) {
 		ctx.beginPath();
@@ -245,6 +269,8 @@ View.prototype.render = function($canvas, ctx, model, controller) {
 		renderSquare(last);
 		ctx.stroke();
 		ctx.globalAlpha = 1;
+		
+		this.gameEnd = -1;
 	} else {
 		ctx.strokeStyle = 'white';
 		ctx.beginPath();
@@ -256,6 +282,10 @@ View.prototype.render = function($canvas, ctx, model, controller) {
 
 		var freeze = 2000, fadeOut = 500, initAlpha = 0.5;
 		var text = 'Game over!';
+		
+		if(model.turn == - model.states.length - 1) 
+			text = '';
+					
 		if (this.gameEnd == -1)
 			this.gameEnd = t;
 		if (t < this.gameEnd + freeze + fadeOut) {
@@ -295,13 +325,20 @@ View.prototype.render = function($canvas, ctx, model, controller) {
 		case ILL_DIAGONAL:
 			$('#tip').html('You cannot make more than two diagonal moves');
 			break;
+		case ILL_MIN:
+			$('#tip').html('You cannot create a continuing ray less than ' + model.CONT_MIN + ' squares');
+			break;
 		case ILL_DIRECTION:
 			$('#tip').html('You cannot make a move in that direction');
 			break;
 		case -1:
-			if (model.gameOver())
-				$('#tip').html(names[-model.turn - 1] + ' won the game!');
-			else
+			if (model.gameOver()) {
+				if(model.turn == - model.states.length - 1) {
+					$('#tip').html('Please Start a New Game!');
+				} else {
+					$('#tip').html(names[-model.turn - 1] + ' won the game!');
+				}
+			} else
 				$('#tip').html('&nbsp;');
 			break;
 	}
@@ -310,6 +347,14 @@ View.prototype.render = function($canvas, ctx, model, controller) {
 $(document).ready(function() {
 	var $canvas = $('#game');
 	var model = new Model();
+	
+	//Create a dead game
+	model.turn = - model.states.length - 1;
+	
+	//Set Time Initially
+	$('#clockR').html('0' + Math.floor(model.time[0] / 60) + ':' + (model.time[0] % 60 < 10? '0':'') + (model.time[0] % 60));
+	$('#clockB').html('0' + Math.floor(model.time[1] / 60) + ':' + (model.time[1] % 60 < 10? '0':'') + (model.time[1] % 60));
+				
 	var view = new View();
 	var controller = new Controller($canvas, model);
 
