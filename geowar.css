@@ -75,8 +75,9 @@
 #rules {
 	padding: 5px;
 	margin: 10px;
-	border: 1px solid grey;
-	font-size: 15px;
+	border: 2px solid #9C9C9C;
+	box-shadow: 0 2px 2px grey;
+	font-size: 14px;
 	font-family: 'Arial', cursive;
 	font-weight: bold;
 	text-shadow: 0 1px 0 white;

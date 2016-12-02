@@ -196,7 +196,7 @@ View.prototype.render = function($canvas, ctx, model, controller) {
 	// Draw dead space.
 	var topLeft = ctx.transformedPoint([ 0, 0 ]);
 	var bottomRight = ctx.transformedPoint([ $canvas[0].width, $canvas[0].height ]);
-	ctx.fillStyle = 'white';
+	ctx.fillStyle = '#191919';
 	ctx.beginPath();
 	ctx.rect(topLeft[0], topLeft[1], bottomRight[0] - topLeft[0], bottomRight[1] - topLeft[1]);
 	ctx.fill();
