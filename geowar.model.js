@@ -13,13 +13,16 @@ var DIR_RDIAGONAL = 2;
 var DIR_LDIAGONAL = 3;
 
 var Model = function() {
-	this.reset();
-
 	// Min for continuing line.
 	this.CONT_MIN = 10;
 	this.DIAG_MAX = 2;
 	this.TIME_LIMIT = 120;
-	
+
+	this.reset();
+	// Create a dead game.
+	this.turn = -(this.states.length + 1);
+	this.states = [ [], [], ];
+
 	// Initialize Player Mode.
 	this.bot = [ false, false];
 };
@@ -33,8 +36,9 @@ Model.prototype.reset = function() {
 	this.turn = 0;
 	this.candidate = null;
 	this.diagonals = [ 0, 0 ];
-	this.direction = [ -1, -1 ];
+	this.direction = [ DIR_INVALID, DIR_INVALID ];
 	this.time = [ this.TIME_LIMIT, this.TIME_LIMIT ];
+	this.lastTick = new Date().getTime();
 	this.grid = [ ];
 	for (var i = 0; i < gridHeight; i++) {
 		this.grid[i] = [ ];
@@ -45,24 +49,34 @@ Model.prototype.reset = function() {
 	this.grid[this.states[1][0][1]][this.states[1][0][0]] = 1;
 };
 
-Model.prototype.updateTime = function() {
-	this.time[this.turn]--;
+Model.prototype.updateTime = function(t) {
+	this.time[this.turn] -= (t - this.lastTick) / 1000;
+	this.lastTick = t;
 
 	// End game if time reaches 0.
-	if (this.time[this.turn] == 0)
+	if (this.time[this.turn] <= 0) {
+		this.time[this.turn] = 0;
 		this.turn = -((this.turn + 1) % this.states.length + 1);
+	}
+};
+
+Model.prototype.getTime = function(p) {
+	if (typeof p === 'undefined')
+		p = this.turn;
+
+	var remaining = Math.round(this.time[p]);
+	return '0' + Math.floor(remaining / 60) + ':' + (remaining % 60 < 10 ? '0':'') + (remaining % 60);
 };
 
 Model.prototype.getPlayerLastMove = function(p) {
+	if (typeof p === 'undefined')
+		p = this.turn;
+
 	return this.states[p].slice(-1)[0];
 };
 
-Model.prototype.getCurrentPlayerLastMove = function() {
-	return this.getPlayerLastMove(this.turn);
-};
-
 Model.prototype.getRayDirection = function(last, now) {
-	last = last || this.getCurrentPlayerLastMove();
+	last = last || this.getPlayerLastMove();
 	now = now || this.candidate;
 	if (now[0] == last[0] && now[1] == last[1])
 		return DIR_NONE;
@@ -79,7 +93,7 @@ Model.prototype.getRayDirection = function(last, now) {
 };
 
 Model.prototype.getRayLength = function(last, now) {
-	last = last || this.getCurrentPlayerLastMove();
+	last = last || this.getPlayerLastMove();
 	now = now || this.candidate;
 	return Math.max(Math.abs(now[0] - last[0]), Math.abs(now[1] - last[1]));
 };
@@ -88,7 +102,7 @@ Model.prototype.checkLegality = function() {
 	if (this.gameOver())
 		return false;
 
-	var last = this.getCurrentPlayerLastMove();
+	var last = this.getPlayerLastMove();
 	var now = this.candidate;
 	var dir = this.getRayDirection(last, now);
 	if (dir == DIR_NONE) {
@@ -136,9 +150,8 @@ Model.prototype.updateCandidate = function(hoverSquare) {
 	if (this.candidate != null && hoverSquare[0] == this.candidate[0] && hoverSquare[1] == this.candidate[1])
 		return;
 
-	var last = this.getCurrentPlayerLastMove();
+	var last = this.getPlayerLastMove();
 	var angle = Math.atan2(last[0] - hoverSquare[0], last[1] - hoverSquare[1]);
-	
 	// Fuzzy matching. Set candidate to the valid ray that minimizes the
 	//  perpendicular distance to hoverSquare.
 	var dir = DIR_INVALID;
@@ -192,7 +205,7 @@ Model.prototype.updateCandidate = function(hoverSquare) {
 
 Model.prototype.selectCandidate = function() {
 	function hasValidMove(model) {
-		var last = model.getCurrentPlayerLastMove();
+		var last = model.getPlayerLastMove();
 		for (var dx = -1; dx <= +1; dx++) {
 			if (last[0] + dx < 0 || last[0] + dx >= gridWidth)
 				continue;
@@ -220,7 +233,7 @@ Model.prototype.selectCandidate = function() {
 	if (this.candidate == null || this.candidate[2] != LEGAL || this.gameOver())
 		return false;
 
-	var last = this.getCurrentPlayerLastMove();
+	var last = this.getPlayerLastMove();
 	var now = this.candidate;
 	var dir = this.getRayDirection(last, now);
 	if (dir == DIR_VERTICAL) {
@@ -238,8 +251,8 @@ Model.prototype.selectCandidate = function() {
 		for (var j = now[0] - last[0], inc = now[0] > last[0] ? -1 : +1; j != 0; j += inc)
 			this.grid[last[1] - j][last[0] + j] = this.turn;
 	}
-	this.direction[this.turn] = dir;
 
+	this.direction[this.turn] = dir;
 	this.states[this.turn].push(this.candidate);
 	this.turn = (this.turn + 1) % this.states.length;
 
@@ -250,20 +263,19 @@ Model.prototype.selectCandidate = function() {
 	return true;
 };
 
-//Simple AI
+// Simple AI
 Model.prototype.botTurn = function() {
-	
 	var last = this.getCurrentPlayerLastMove();
-	
-	for(var i = 0; i < 100000; i++) {
+
+	for (var i = 0; i < 100000; i++) {
 		console.log('Hello');
 	}
-	
+
 	this.candidate = [ last[0] + this.CONT_MIN, last[1] ];
-	
-	//Choose a random direction
-	
-	
+
+	// Choose a random direction.
+
+
 	this.candidate[2] = LEGAL;
 	return this.candidate;
 };

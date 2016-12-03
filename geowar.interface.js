@@ -42,33 +42,19 @@ var Controller = function($canvas, model, view) {
 		e.preventDefault();
 	});
 
-	controller.refreshIntervalId;
 	$('#newgame').on('click', function(e) {
-		// Stop previous timer.
-		clearInterval(controller.refreshIntervalId);
-
 		view.reset();
 		model.reset();
 
-		// Initialize for resets.
-		$('#clockR').html('0' + Math.floor(model.time[0] / 60) + ':' + (model.time[0] % 60 < 10? '0':'') + (model.time[0] % 60));
-		$('#clockB').html('0' + Math.floor(model.time[1] / 60) + ':' + (model.time[1] % 60 < 10? '0':'') + (model.time[1] % 60));
-
-		// Start timer.
-		controller.refreshIntervalId = setInterval(function () {
-			if (!model.gameOver()) {
-				model.updateTime();
-
-				// Figure out which clock to update: 0 = Red, 1 = Blue.
-				$('#clockR').html('0' + Math.floor(model.time[0] / 60) + ':' + (model.time[0] % 60 < 10? '0':'') + (model.time[0] % 60));
-				$('#clockB').html('0' + Math.floor(model.time[1] / 60) + ':' + (model.time[1] % 60 < 10? '0':'') + (model.time[1] % 60));
-			}
-		}, 1000);
+		for (var player = 0; player < model.states.length; player++) {
+			$('#playername' + player).text(names[player] + ':');
+			$('#clock' + player).text(model.getTime(player));
+		}
 	});
-	
+
 	//Toggle Player Mode Buttons
 	$('#redplayer').on('click', function(e) {
-		if(model.bot[0]) {
+		if (model.bot[0]) {
 			model.bot[0] = false;
 			$('#redplayer').val('Human');
 		} else {
@@ -76,9 +62,9 @@ var Controller = function($canvas, model, view) {
 			$('#redplayer').val('Bot');
 		}
 	});
-	
+
 	$('#blueplayer').on('click', function(e) {
-		if(model.bot[1]) {
+		if (model.bot[1]) {
 			model.bot[1] = false;
 			$('#blueplayer').val('Human');
 		} else {
@@ -93,7 +79,6 @@ Controller.prototype.endFrame = function() {
 };
 
 Controller.prototype.beginFrame = function($canvas, ctx, model) {
-	
 	var customCursor = false;
 	if (this.mouseBtn[2]) {
 		var pt = ctx.transformedPoint(this.mousePos);
@@ -138,10 +123,9 @@ Controller.prototype.beginFrame = function($canvas, ctx, model) {
 			$canvas.css('cursor', 'grab');
 	}
 	
-	/*If Bot is set choose position if your turn*/
-	if(model.bot[model.turn]) {
+	// If Bot is set choose position if your turn.
+	if (model.bot[model.turn])
 		this.lmbStart = model.botTurn(); //model.candidate;
-	}
 
 	//Only Consider Clicks as input if not bot's turn
 	if (this.mouseBtn[0] && !model.bot[model.turn]) {
@@ -235,21 +219,23 @@ View.prototype.render = function($canvas, ctx, model, controller) {
 	ctx.fill();
 
 	// Color in squares.
-	for (var player = 0; player < model.states.length; player++) {
-		var history = model.states[player];
-		var last = history[0];
-		ctx.fillStyle = colors[player];
-		ctx.beginPath();
-		ctx.rect(ctx.lineWidth + last[0] * squareSize, ctx.lineWidth + last[1] * squareSize, squareSize - ctx.lineWidth, squareSize - ctx.lineWidth);
-		for (var i = 1; i < history.length; i++) {
-			var now = history[i];
-			renderSequence(last, now);
-			last = now;
+	if (model.turn != -(model.states.length + 1)) {
+		for (var player = 0; player < model.states.length; player++) {
+			var history = model.states[player];
+			var last = history[0];
+			ctx.fillStyle = colors[player];
+			ctx.beginPath();
+			ctx.rect(ctx.lineWidth + last[0] * squareSize, ctx.lineWidth + last[1] * squareSize, squareSize - ctx.lineWidth, squareSize - ctx.lineWidth);
+			for (var i = 1; i < history.length; i++) {
+				var now = history[i];
+				renderSequence(last, now);
+				last = now;
+			}
+			ctx.fill();
 		}
-		ctx.fill();
 	}
 	
-	var last = model.gameOver() ? null : model.getCurrentPlayerLastMove();
+	var last = model.gameOver() ? null : model.getPlayerLastMove();
 	var now = model.candidate;
 	var t = new Date().getTime();
 	if (!model.gameOver() && now != null) {
@@ -296,23 +282,28 @@ View.prototype.render = function($canvas, ctx, model, controller) {
 		renderSquare(last);
 		ctx.stroke();
 		ctx.globalAlpha = 1;
+
+		model.updateTime(t);
+		$('#clock' + model.turn).text(model.getTime());
 	} else {
-		ctx.strokeStyle = 'white';
-		ctx.beginPath();
-		renderSquare(model.getPlayerLastMove(0));
-		ctx.stroke();
-		ctx.beginPath();
-		renderSquare(model.getPlayerLastMove(1));
-		ctx.stroke();
+		var text = 'Are you ready?';
+		if (model.turn != -(model.states.length + 1)) {
+			ctx.strokeStyle = 'white';
+			ctx.beginPath();
+			renderSquare(model.getPlayerLastMove(0));
+			ctx.stroke();
+			ctx.beginPath();
+			renderSquare(model.getPlayerLastMove(1));
+			ctx.stroke();
+			text = 'Game over!';
+		}
 
 		var freeze = 2000, fadeOut = 500, initAlpha = 0.5;
-		var text = 'Game over!';
-
-		if (model.turn == -(model.states.length + 1))
-			text = 'Are you ready?';
-
 		if (this.gameEnd == -1)
-			this.gameEnd = t;
+			if (model.turn == -(model.states.length + 1))
+				this.gameEnd = Infinity;
+			else
+				this.gameEnd = t;
 		if (t < this.gameEnd + freeze + fadeOut) {
 			ctx.save();
 			ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -351,14 +342,14 @@ View.prototype.render = function($canvas, ctx, model, controller) {
 			$('#tip').html('You cannot draw more than ' + model.DIAG_MAX + ' diagonal rays');
 			break;
 		case ILL_MIN:
-			$('#tip').html('You cannot draw a continuing ray shorter than ' + model.CONT_MIN + ' squares');
+			$('#tip').html('You cannot draw a continuing ray shorter than ' + model.CONT_MIN + ' squares long');
 			break;
 		case ILL_DIRECTION:
 			$('#tip').html('You cannot draw a ray in that direction');
 			break;
 		case -1:
 			if (model.gameOver())
-				if(model.turn == -(model.states.length + 1))
+				if (model.turn == -(model.states.length + 1))
 					$('#tip').html('Please start a new game!');
 				else
 					$('#tip').html(names[-model.turn - 1] + ' won the game!');
@@ -372,12 +363,8 @@ $(document).ready(function() {
 	var $canvas = $('#game');
 	var model = new Model();
 
-	// Create a dead game.
-	model.turn = -(model.states.length + 1);
-
-	// Set time initially.
-	$('#clockR').html('0' + Math.floor(model.TIME_LIMIT / 60) + ':' + (model.TIME_LIMIT % 60 < 10? '0':'') + (model.TIME_LIMIT % 60));
-	$('#clockB').html('0' + Math.floor(model.TIME_LIMIT / 60) + ':' + (model.TIME_LIMIT % 60 < 10? '0':'') + (model.TIME_LIMIT % 60));
+	for (var player = 0; player < model.states.length; player++)
+		$('#clock' + player).text(model.getTime(player));
 
 	var view = new View();
 	var controller = new Controller($canvas, model, view);
