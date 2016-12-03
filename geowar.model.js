@@ -19,6 +19,9 @@ var Model = function() {
 	this.CONT_MIN = 10;
 	this.DIAG_MAX = 2;
 	this.TIME_LIMIT = 120;
+	
+	// Initialize Player Mode.
+	this.bot = [ false, false];
 };
 
 Model.prototype.gameOver = function() {
@@ -245,4 +248,22 @@ Model.prototype.selectCandidate = function() {
 	this.candidate = null;
 
 	return true;
+};
+
+//Simple AI
+Model.prototype.botTurn = function() {
+	
+	var last = this.getCurrentPlayerLastMove();
+	
+	for(var i = 0; i < 100000; i++) {
+		console.log('Hello');
+	}
+	
+	this.candidate = [ last[0] + this.CONT_MIN, last[1] ];
+	
+	//Choose a random direction
+	
+	
+	this.candidate[2] = LEGAL;
+	return this.candidate;
 };

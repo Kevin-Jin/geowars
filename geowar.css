@@ -94,6 +94,13 @@ li{
   margin: 5px 0;
 }
 
+body {
+  /* floats + margins + borders = 270 */
+  max-width: 808px;
+  margin: auto;
+  background-color: white;
+}
+
 .timer {
 	margin: 15px;
 	font-size: 20px;

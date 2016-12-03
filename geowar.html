@@ -27,14 +27,14 @@
 			<hr>
 			
 			<div class='timer'>Red P1: 
-				<button class='small-button'>Human</button>
+				<input id='redplayer' type="button" class='player-mode small-button' value='Human'></input>
 			</div>
 			<span id="clockR" class='display'></span>
 			
 			<hr>
 			
 			<div class='timer'>Blue P2: 
-				<button class='small-button'>Bot</button>
+				<input id='blueplayer' type="button" class='player-mode small-button' value='Human'></input>
 			</div>
 			<span id="clockB" class='display'></span>
 			
@@ -47,7 +47,7 @@
 					<li>Players take turns to draw a line segment from the last point.</li>
 					<li>Only 2 diagonal segments are permitted per player.</li>
 					<li>Extending the previous line must be at least by 10 units</li>
-					<li>The first player who cannot draw  segment loses.</li>
+					<li>The first player who cannot draw a segment loses.</li>
 					<li>Each ray cannot intersect another colored ray.</li>
 				</ol>
 			</div>

@@ -66,6 +66,26 @@ var Controller = function($canvas, model, view) {
 		}, 1000);
 	});
 	
+	//Toggle Player Mode Buttons
+	$('#redplayer').on('click', function(e) {
+		if(model.bot[0]) {
+			model.bot[0] = false;
+			$('#redplayer').val('Human');
+		} else {
+			model.bot[0] = true;
+			$('#redplayer').val('Bot');
+		}
+	});
+	
+	$('#blueplayer').on('click', function(e) {
+		if(model.bot[1]) {
+			model.bot[1] = false;
+			$('#blueplayer').val('Human');
+		} else {
+			model.bot[1] = true;
+			$('#blueplayer').val('Bot');
+		}
+	});
 };
 
 Controller.prototype.endFrame = function() {
@@ -117,8 +137,14 @@ Controller.prototype.beginFrame = function($canvas, ctx, model) {
 		if (!customCursor)
 			$canvas.css('cursor', 'grab');
 	}
+	
+	/*If Bot is set choose position if your turn*/
+	if(model.bot[model.turn]) {
+		this.lmbStart = model.botTurn(); //model.candidate;
+	}
 
-	if (this.mouseBtn[0]) {
+	//Only Consider Clicks as input if not bot's turn
+	if (this.mouseBtn[0] && !model.bot[model.turn]) {
 		if (this.lmbStart == null)
 			this.lmbStart = model.candidate;
 	} else if (this.lmbStart != null) {
@@ -283,7 +309,7 @@ View.prototype.render = function($canvas, ctx, model, controller) {
 		var text = 'Game over!';
 
 		if (model.turn == -(model.states.length + 1))
-			text = '';
+			text = 'Are you ready?';
 
 		if (this.gameEnd == -1)
 			this.gameEnd = t;
