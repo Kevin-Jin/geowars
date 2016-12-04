@@ -275,7 +275,7 @@ Model.prototype.selectCandidate = function() {
 Model.prototype.botTurn = function() {
 	
 	//Last Position
-	var last = this.getCurrentPlayerLastMove();
+	var last = this.getPlayerLastMove();
 	
 	//If first move of the game, move 1 direction right
 	if(this.states[0].length == 1 && this.states[1].length == 1) {
