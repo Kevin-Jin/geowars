@@ -5,6 +5,9 @@ var ILL_DIAGONAL = 2;
 var ILL_DIRECTION = 3;
 var ILL_MIN = 4;
 
+//Only used by AI
+var ILL_OOB = 5;
+
 var DIR_INVALID = -2;
 var DIR_NONE = -1;
 var DIR_VERTICAL = 0;
@@ -21,7 +24,7 @@ var Model = function() {
 	this.TIME_LIMIT = 120;
 	
 	// Initialize Player Mode.
-	this.bot = [ false, false];
+	this.bot = [ false, false ];
 };
 
 Model.prototype.gameOver = function() {
@@ -29,7 +32,7 @@ Model.prototype.gameOver = function() {
 };
 
 Model.prototype.reset = function() {
-	this.states = [ [ [ Math.floor(gridWidth / 2), Math.floor(gridHeight / 2)] ], [ [ Math.floor(gridWidth / 2), Math.floor(gridHeight / 2) + 1] ] ];
+	this.states = [ [ [ Math.floor(gridWidth / 2), Math.floor(gridHeight / 2) - 1] ], [ [ Math.floor(gridWidth / 2), Math.floor(gridHeight / 2)] ] ];
 	this.turn = 0;
 	this.candidate = null;
 	this.diagonals = [ 0, 0 ];
@@ -91,6 +94,11 @@ Model.prototype.checkLegality = function() {
 	var last = this.getCurrentPlayerLastMove();
 	var now = this.candidate;
 	var dir = this.getRayDirection(last, now);
+	
+	//Check if out of bounds: For AI
+	if(now[0] < 0 || now[0] >= gridWidth || now[1] < 0 || now[1] >= gridHeight)
+		return ILL_OOB;
+	
 	if (dir == DIR_NONE) {
 		return ILL_BLOCKED;
 	} else if (dir == DIR_VERTICAL) {
@@ -250,20 +258,104 @@ Model.prototype.selectCandidate = function() {
 	return true;
 };
 
-//Simple AI
+//Hyper-Aggressive AI
 Model.prototype.botTurn = function() {
 	
+	//Last Position
 	var last = this.getCurrentPlayerLastMove();
 	
-	for(var i = 0; i < 100000; i++) {
-		console.log('Hello');
+	//If first move of the game, move 1 direction right
+	if(this.states[0].length == 1 && this.states[1].length == 1) {
+		this.candidate = [ last[0] + 1, last[1], LEGAL ];
+		return this.candidate;
 	}
 	
-	this.candidate = [ last[0] + this.CONT_MIN, last[1] ];
+	var directions = [[1,0],[0,1],[-1,0],[0,-1]];
 	
-	//Choose a random direction
+	//Consider diagonals
+	if (this.diagonals[(this.turn + 1) % 2] < this.DIAG_MAX) {
+		directions = directions.concat([[1,1],[-1,1],[1,-1],[-1,-1]]);
+	}
 	
+	//Find all Valid moves of opponent
+	var opponentMoves = {};
 	
-	this.candidate[2] = LEGAL;
+	var lastOpp = this.getPlayerLastMove((this.turn + 1) % 2);
+
+	for(var dirInd in directions) {
+		var direction = directions[dirInd];
+		var tempPos = [lastOpp[0] + direction[0], lastOpp[1] + direction[1]];
+		
+		//Go in each direction
+		while( tempPos[0] > 0 && tempPos[0] < gridWidth && tempPos[1] > 0 && tempPos[1] < gridHeight && this.grid[tempPos[1]][tempPos[0]] == -1) { //Free Space
+			
+			//Simple Hash
+			opponentMoves[tempPos[0] + '-' + tempPos[1]] = true;
+			
+			//Update In direction
+			tempPos[0] += direction[0];
+			tempPos[1] += direction[1];
+		}
+	}
+	
+	//Readjust to my directions
+	if(this.diagonals[this.turn] >= this.DIAG_MAX) 
+		directions = [[1,0],[0,1],[-1,0],[0,-1]];
+	
+	//TODO: Shuffle Directions
+	
+	var mostBlocked = -1;
+	var best = [];
+	var bestDist = gridHeight + 1; //Unreachable Value
+	
+	//Go over my directions
+	for(var dirInd in directions) {
+		var direction = directions[dirInd];
+		
+		this.candidate = [last[0] + direction[0], last[1] + direction[1]];
+		
+		if(this.checkLegality() == ILL_MIN) // If Continuing Line, jump by min dist
+			this.candidate = [last[0] + this.CONT_MIN * direction[0], last[1] + this.CONT_MIN * direction[1]]; 
+		
+		var blocked = 0;
+		
+		//Go in each direction
+		while( this.checkLegality() == LEGAL) { //IF LEGAL
+		
+			var moveHash = this.candidate[0] + '-' + this.candidate[1];
+			
+			if(moveHash in opponentMoves) {
+				blocked += 1;
+			}
+			
+			var a = this.candidate[0] - lastOpp[0];
+			var b = this.candidate[1] - lastOpp[1];
+
+			var distance = Math.sqrt( a*a + b*b );
+							
+			//prioritize moves that block the most
+			if(blocked > mostBlocked) {
+				best = [this.candidate[0], this.candidate[1]];
+				mostBlocked = blocked;
+				bestDist = distance;
+				console.log(distance + ' ' + moveHash);
+			} else if(blocked == mostBlocked) {
+				if(distance < bestDist) {
+					best = [this.candidate[0], this.candidate[1]];
+					bestDist = distance;
+				}
+			}
+			
+			//If you are closer, than run away
+			
+			//Update In direction
+			this.candidate[0] += direction[0];
+			this.candidate[1] += direction[1];
+		}
+	}
+	
+	//Ensured that my move was legal
+	this.candidate = [best[0], best[1], LEGAL]; 
+	
 	return this.candidate;
 };
