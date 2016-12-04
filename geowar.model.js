@@ -315,11 +315,31 @@ Model.prototype.botTurn = function() {
 	if(this.diagonals[this.turn] >= this.DIAG_MAX) 
 		directions = [[1,0],[0,1],[-1,0],[0,-1]];
 	
-	//TODO: Shuffle Directions
+	//Shuffle Directions
+	var shuffle = function(array) {
+	  var currentIndex = array.length, temporaryValue, randomIndex;
+
+	  //While there remain elements to shuffle...
+	  while (0 !== currentIndex) {
+		// Pick a remaining element...
+		randomIndex = Math.floor(Math.random() * currentIndex);
+		currentIndex -= 1;
+
+		// And swap it with the current element.
+		temporaryValue = array[currentIndex];
+		array[currentIndex] = array[randomIndex];
+		array[randomIndex] = temporaryValue;
+	  }
+
+	  return array;
+	}
+	
+	directions = shuffle(directions);
 	
 	var mostBlocked = -1;
 	var best = [];
 	var bestDist = gridHeight + 1; //Unreachable Value
+	var myMoves = 0;
 	
 	//Go over my directions
 	for(var dirInd in directions) {
@@ -351,7 +371,7 @@ Model.prototype.botTurn = function() {
 				best = [this.candidate[0], this.candidate[1]];
 				mostBlocked = blocked;
 				bestDist = distance;
-				console.log(distance + ' ' + moveHash);
+
 			} else if(blocked == mostBlocked) {
 				if(distance < bestDist) {
 					best = [this.candidate[0], this.candidate[1]];
@@ -359,14 +379,40 @@ Model.prototype.botTurn = function() {
 				}
 			}
 			
-			//If you are closer, than run away
-			
 			//Update In direction
 			this.candidate[0] += direction[0];
 			this.candidate[1] += direction[1];
+			
+			myMoves += 1;
 		}
 	}
 	
+	//If you are more constrained, than run away with min distance
+	if(Object.keys(opponentMoves).length > myMoves) {
+		best = [];
+		bestDist = -1;
+		for(var dirInd in directions) {
+			var direction = directions[dirInd];
+			
+			this.candidate = [last[0] + direction[0], last[1] + direction[1]];
+			
+			if(this.checkLegality() == ILL_MIN) // If Continuing Line, jump by min dist
+				this.candidate = [last[0] + this.CONT_MIN * direction[0], last[1] + this.CONT_MIN * direction[1]]; 
+			
+			//Go in each direction
+			if(this.checkLegality() == LEGAL) { //IF LEGAL
+				var a = this.candidate[0] - lastOpp[0];
+				var b = this.candidate[1] - lastOpp[1];
+
+				var distance = Math.sqrt( a*a + b*b );
+				if(distance > bestDist) {
+					best = [this.candidate[0], this.candidate[1]];
+					bestDist = distance;
+				}
+			}
+		}
+	}		
+
 	//Ensured that my move was legal
 	this.candidate = [best[0], best[1], LEGAL]; 
 
