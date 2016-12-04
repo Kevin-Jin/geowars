@@ -339,7 +339,6 @@ Model.prototype.botTurn = function() {
 	var mostBlocked = -1;
 	var best = [];
 	var bestDist = gridHeight + 1; //Unreachable Value
-	var myMoves = 0;
 	
 	//Go over my directions
 	for(var dirInd in directions) {
@@ -382,13 +381,59 @@ Model.prototype.botTurn = function() {
 			//Update In direction
 			this.candidate[0] += direction[0];
 			this.candidate[1] += direction[1];
+		}
+	}
+	
+	//Check size of position you will make
+	var myMoves = 0;
+	
+	this.states[this.turn].push(best);
+	for(var dirInd in directions) {
+		var direction = directions[dirInd];
+		
+		this.candidate = [best[0] + direction[0], best[1] + direction[1]];
+		
+		if(this.checkLegality() == ILL_MIN) // If Continuing Line, jump by min dist
+			this.candidate = [best[0] + this.CONT_MIN * direction[0], best[1] + this.CONT_MIN * direction[1]]; 
+		
+		//Go in each direction
+		while(this.checkLegality() == LEGAL) { //IF LEGAL		
+			
+			//Update In direction
+			this.candidate[0] += direction[0];
+			this.candidate[1] += direction[1];
 			
 			myMoves += 1;
 		}
 	}
+	this.states[this.turn].pop();
+	
+	//Check updated num of position they can make
+	var theirMoves = 0;
+	
+	this.states[this.turn].push(lastOpp);
+	for(var dirInd in directions) {
+		var direction = directions[dirInd];
+		
+		this.candidate = [lastOpp[0] + direction[0], lastOpp[1] + direction[1]];
+		
+		if(this.checkLegality() == ILL_MIN) // If Continuing Line, jump by min dist
+			this.candidate = [lastOpp[0] + this.CONT_MIN * direction[0], lastOpp[1] + this.CONT_MIN * direction[1]]; 
+		
+		//Go in each direction
+		while(this.checkLegality() == LEGAL && this.candidate[0] != best[0] && this.candidate[1] != best[1]) { //IF LEGAL		
+			
+			//Update In direction
+			this.candidate[0] += direction[0];
+			this.candidate[1] += direction[1];
+			
+			theirMoves += 1;
+		}
+	}
+	this.states[this.turn].pop();
 	
 	//If you are more constrained, than run away with min distance
-	if(Object.keys(opponentMoves).length > myMoves) {
+	if(theirMoves > myMoves) {
 		best = [];
 		bestDist = -1;
 		for(var dirInd in directions) {
