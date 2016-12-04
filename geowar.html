@@ -12,7 +12,7 @@
 <body>
 	<!-- Game Header -->
 	<div id="board_header" class="metallic">
-		<h3 id="title"></h3>
+		<h3 id="title">- Geowars -</h3>
 	</div>
 	
 	<!-- Game Canvas -->
@@ -21,28 +21,27 @@
 		<canvas id="game" width="600" height="600"></canvas>
 		
 		<!-- Scoreboard -->
-		<div id ="scoreboard" class="metallic">
+		<div id="scoreboard" class="metallic">
 			<div id="button-wrapper"><button id="newgame" class="action-button shadow animate red-button">New Game</button></div>
-			
 			<hr>
 			
-			<div class='timer'>Red P1: 
-				<input id='redplayer' type="button" class='player-mode small-button' value='Human'></input>
+			<div class="timer">
+				<span class="playername" id="playername0">Player 1:</span>
+				<input id="redplayer" type="button" class="player-mode small-button" value="Human"></input>
+				<span id="clock0" class="display" style="clear: both">0:00</span>
 			</div>
-			<span id="clockR" class='display'></span>
-			
 			<hr>
 			
-			<div class='timer'>Blue P2: 
-				<input id='blueplayer' type="button" class='player-mode small-button' value='Human'></input>
+			<div class="timer">
+				<span class="playername" id="playername1">Player 2:</span>
+				<input id="blueplayer" type="button" class="player-mode small-button" value="Human"></input>
+				<span id="clock1" class="display" style="clear: both">0:00</span>
 			</div>
-			<span id="clockB" class='display'></span>
-			
 			<hr>
 			
-			<div id='rules'>
+			<div id="rules">
 				Game Rules:
-				<ol id='rule-list'> 
+				<ol id="rule-list"> 
 					<li>Grid Size: 100 x 100.</li>
 					<li>Players take turns to draw a line segment from the last point.</li>
 					<li>Only 2 diagonal segments are permitted per player.</li>
@@ -56,9 +55,8 @@
 	
 	<!-- Hints Dashboard -->
 	<div id ="dashboard" class="metallic">
-		<div id="tip" class='display'>&nbsp;</div>
+		<div id="tip" class="display">&nbsp;</div>
 	</div>
-	
 </body>
 <link href='http://fonts.googleapis.com/css?family=Lobster' rel='stylesheet' type='text/css'>
 </html>
