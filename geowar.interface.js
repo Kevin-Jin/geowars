@@ -69,7 +69,7 @@ var Controller = function($canvas, model, view) {
 		return false;
 	});
 
-	//Toggle Player Mode Buttons
+	// Toggle Player Mode Buttons.
 	$('#redplayer').on('click', function(e) {
 		if (model.bot[0]) {
 			model.bot[0] = false;
@@ -139,12 +139,12 @@ Controller.prototype.beginFrame = function($canvas, ctx, model) {
 		if (!customCursor)
 			$canvas.css('cursor', 'grab');
 	}
-	
+
 	// If Bot is set choose position if your turn.
 	if (model.bot[model.turn])
 		this.lmbStart = model.botTurn(); //model.candidate;
 
-	//Only Consider Clicks as input if not bot's turn
+	// Only Consider Clicks as input if not bot's turn.
 	if (this.mouseBtn[0] && !model.bot[model.turn]) {
 		if (this.lmbStart == null)
 			this.lmbStart = model.candidate;
@@ -251,7 +251,7 @@ View.prototype.render = function($canvas, ctx, model, controller) {
 			ctx.fill();
 		}
 	}
-	
+
 	var last = model.gameOver() ? null : model.getPlayerLastMove();
 	var now = model.candidate;
 	var t = new Date().getTime();
@@ -272,7 +272,7 @@ View.prototype.render = function($canvas, ctx, model, controller) {
 	}
 
 	ctx.strokeStyle = '#0c0c0c';
-	
+
 	// Draw horizontal grid lines.
 	for (var i = 0; i <= gridHeight; i++) {
 		ctx.beginPath();

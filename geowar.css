@@ -8,7 +8,7 @@
 }
 
 #newgame {
-	margin: 0 auto; 
+	margin: 0 auto;
 	font-size: 17px;
 }
 
@@ -32,7 +32,7 @@
 }
 
 #wrapper {
-	overflow: hidden; 
+	overflow: hidden;
 }
 
 #scoreboard {
@@ -83,15 +83,14 @@
 	margin-top: 0px;
 }
 
-li{
-  margin: 5px 0;
+li {
+	margin: 5px 0;
 }
 
 body {
-  /* floats + margins + borders = 270 */
-  max-width: 808px;
-  margin: auto;
-  background-color: white;
+	max-width: 808px;
+	margin: auto;
+	background-color: white;
 }
 
 .playername {
@@ -177,7 +176,7 @@ body {
 	font-family: 'Arial', cursive;
 	font-weight: bold;
 	color: #FFF;
-	text-decoration: none;	
+	text-decoration: none;
 	display: inline;
 }
 
@@ -192,7 +191,7 @@ body {
 	border-bottom: 1px solid;
 }
 
-.display { 
+.display {
 	border: 2px inset White;
 	background: Black;
 	padding: 5px;
@@ -206,7 +205,7 @@ body {
 
 .metallic {
 	background: -webkit-radial-gradient(center, circle, rgba(255,255,255,.35), rgba(255,255,255,0) 20%, rgba(255,255,255,0) 21%),
-				-webkit-radial-gradient(center, circle, rgba(0,0,0,.2), rgba(0,0,0,0) 20%, rgba(0,0,0,0) 21%), 
+				-webkit-radial-gradient(center, circle, rgba(0,0,0,.2), rgba(0,0,0,0) 20%, rgba(0,0,0,0) 21%),
 				-webkit-radial-gradient(center, circle farthest-corner, #c4c4c4, #7f7e7e);
 	background-size: 10px 10px, 10px 10px, 100% 100%;
 	background-repeat: repeat, repeat, no-repeat;

@@ -6,10 +6,11 @@
 <link rel="stylesheet" href="geowar.css" />
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.2/jquery.min.js"></script>
 <script src="geowar.model.js"></script>
+<script src="geowar.model.ai.js"></script>
 <script src="geowar.interface.transform.js"></script>
 <script src="geowar.interface.js"></script>
 </head>
-<body>	
+<body>
 	<div id="overlay">
 		<div id="dimmer"></div>
 		<form id="nameform">
@@ -20,7 +21,7 @@
 			<input type="submit" value="Start" id="start" />
 		</form>
 	</div>
-
+	
 	<!-- Game Header -->
 	<div id="board_header" class="metallic">
 		<h3 id="title">- Geowars -</h3>
@@ -52,7 +53,7 @@
 			
 			<div id="rules">
 				Game Rules:
-				<ol id="rule-list"> 
+				<ol id="rule-list">
 					<li>Grid Size: 100 x 100.</li>
 					<li>Players take turns to draw a line segment from the last point.</li>
 					<li>Only 2 diagonal segments are permitted per player.</li>
