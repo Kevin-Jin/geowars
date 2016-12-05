@@ -9,7 +9,18 @@
 <script src="geowar.interface.transform.js"></script>
 <script src="geowar.interface.js"></script>
 </head>
-<body>
+<body>	
+	<div id="overlay">
+		<div id="dimmer"></div>
+		<form id="nameform">
+			<label for="enterplayername0">Name for red player:</label>
+			<input type="text" maxlength="24" id="enterplayername0" value="Player 1" />
+			<label for="enterplayername1">Name for blue player:</label>
+			<input type="text" maxlength="24" id="enterplayername1" value="Player 2" />
+			<input type="submit" value="Start" id="start" />
+		</form>
+	</div>
+
 	<!-- Game Header -->
 	<div id="board_header" class="metallic">
 		<h3 id="title">- Geowars -</h3>

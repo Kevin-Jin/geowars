@@ -1,6 +1,6 @@
 var squareSize = 6;
 var colors = [ 'red', 'blue' ];
-var names = [ 'Red', 'Blue' ];
+var names = [ 'Player 1', 'Player 2' ];
 
 var Controller = function($canvas, model, view) {
 	var controller = this;
@@ -43,13 +43,30 @@ var Controller = function($canvas, model, view) {
 	});
 
 	$('#newgame').on('click', function(e) {
+		for (var player = 0; player < model.states.length; player++)
+			$('#enterplayername' + player).val(names[player]);
+		$('#overlay').fadeIn(200);
+		$('#enterplayername0').select();
+	});
+	$('body').keyup(function(e) {
+		if ($('#overlay').css('display') !== 'none' && e.keyCode === 27)
+			$('#dimmer').trigger('click');
+	});
+	$('#dimmer').click(function() {
+		$('#overlay').fadeOut(100);
+	});
+	$('#nameform').on('submit', function(e) {
 		view.reset();
 		model.reset();
 
 		for (var player = 0; player < model.states.length; player++) {
+			names[player] = $('#enterplayername' + player).val();
 			$('#playername' + player).text(names[player] + ':');
 			$('#clock' + player).text(model.getTime(player));
 		}
+
+		$('#overlay').fadeOut(100);
+		return false;
 	});
 
 	//Toggle Player Mode Buttons
