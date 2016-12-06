@@ -34,6 +34,34 @@ Model.prototype.gameOver = function() {
 	return this.turn < 0;
 };
 
+Model.prototype.saveScore = function() {
+	//Save Winner
+	if(!this.bot[-this.turn - 1]) {
+		/* UNCOMMENT IN PRODUCTION
+		$.ajax({
+			url: "http://cims.nyu.edu/~by653/hps/dbman/saveScore.php",
+			type: "get", 
+			data:{ gamename:"Geowar" , UserID: names[-this.turn - 1] , score: "WIN"},
+			error: function(xhr) {
+				console.log(xhr);
+			}
+		});*/
+	}
+	
+	//Save Loser
+	if(!this.bot[this.turn + 2]) {
+		/* UNCOMMENT IN PRODUCTION
+		$.ajax({
+			url: "http://cims.nyu.edu/~by653/hps/dbman/saveScore.php",
+			type: "get", 
+			data:{ gamename:"Geowar" , UserID: names[this.turn + 2] , score: "LOSE"},
+			error: function(xhr) {
+				console.log(xhr);
+			}
+		});*/
+	}
+};
+
 Model.prototype.reset = function() {
 	this.states = [ [ [ Math.floor(gridWidth / 2), Math.floor(gridHeight / 2) - 1] ], [ [ Math.floor(gridWidth / 2), Math.floor(gridHeight / 2)] ] ];
 	this.turn = 0;
@@ -59,7 +87,10 @@ Model.prototype.updateTime = function(t) {
 	// End game if time reaches 0.
 	if (this.time[this.turn] <= 0) {
 		this.time[this.turn] = 0;
+		
+		//Ajax query to save score
 		this.turn = -((this.turn + 1) % this.states.length + 1);
+		this.saveScore();
 	}
 };
 
@@ -264,8 +295,10 @@ Model.prototype.selectCandidate = function() {
 	this.states[this.turn].push(this.candidate);
 	this.turn = (this.turn + 1) % this.states.length;
 
-	if (!hasValidMove(this))
+	if (!hasValidMove(this)) {
 		this.turn = -((this.turn + 1) % this.states.length + 1);
+		this.saveScore();
+	}
 	this.candidate = null;
 
 	return true;

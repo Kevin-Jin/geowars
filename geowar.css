@@ -54,7 +54,6 @@
 
 #tip {
 	margin: 12px;
-	height: 20px;
 }
 
 #button-wrapper {
@@ -70,7 +69,7 @@
 	margin: 10px;
 	border: 2px solid #9C9C9C;
 	box-shadow: 0 2px 2px grey;
-	font-size: 14px;
+	font-size: 13px;
 	font-family: 'Arial', cursive;
 	font-weight: bold;
 	text-shadow: 0 1px 0 white;
@@ -83,14 +82,20 @@
 	margin-top: 0px;
 }
 
-li {
-	margin: 5px 0;
-}
-
-body {
-	max-width: 808px;
+article {
+	max-width: 900px;
 	margin: auto;
 	background-color: white;
+}
+
+.line {
+	display: block;
+    -webkit-margin-before: 0.5em;
+    -webkit-margin-after: 0.5em;
+    -webkit-margin-start: auto;
+    -webkit-margin-end: auto;
+    border-style: inset;
+    border-width: 1px;
 }
 
 .playername {
