@@ -61,8 +61,8 @@ var Controller = function($canvas, model, view) {
 
 		for (var player = 0; player < model.states.length; player++) {
 			names[player] = $('#enterplayername' + player).val();
-			$('#playername' + player).text(names[player] + ':');
-			$('#clock' + player).text(model.getTime(player));
+			view.updateDomText('#playername' + player, names[player] + ':');
+			view.updateDomText('#clock' + player, model.getTime(player));
 		}
 
 		$('#overlay').fadeOut(100);
@@ -156,6 +156,7 @@ Controller.prototype.beginFrame = function($canvas, ctx, model) {
 };
 
 var View = function() {
+	this.domTextHashes = {};
 	this.reset();
 };
 
@@ -188,6 +189,22 @@ View.prototype.makeCameraInvertible = function(ctx) {
 	ctx.transformedPoint = function(p) {
 		return xform.inverse().multiply(p);
 	};
+};
+
+View.prototype.updateDomText = function(selector, newHtml) {
+	function stringHash(str) {
+		var hash = 0, len = str.length, i;
+		for (i = 0, len = str.length; i < len; i++)
+			hash = (hash * 31 + str.charCodeAt(i)) | 0;
+		return hash;
+	}
+
+	var newHash = stringHash(newHtml);
+	if (selector in this.domTextHashes && this.domTextHashes[selector] == newHash)
+		return;
+
+	$(selector).html(newHtml);
+	this.domTextHashes[selector] = newHash;
 };
 
 View.prototype.render = function($canvas, ctx, model, controller) {
@@ -301,7 +318,7 @@ View.prototype.render = function($canvas, ctx, model, controller) {
 		ctx.globalAlpha = 1;
 
 		model.updateTime(t);
-		$('#clock' + model.turn).text(model.getTime());
+		this.updateDomText('#clock' + model.turn, model.getTime());
 	} else {
 		var text = 'Are you ready?';
 		if (model.turn != -(model.states.length + 1)) {
@@ -350,28 +367,28 @@ View.prototype.render = function($canvas, ctx, model, controller) {
 
 	switch (now ? now[2] : -1) {
 		case LEGAL:
-			$('#tip').html('You are drawing a ray of length ' + model.getRayLength(last, now));
+			this.updateDomText('#tip', 'You are drawing a ray of length ' + model.getRayLength(last, now));
 			break;
 		case ILL_BLOCKED:
-			$('#tip').html('You cannot intersect another ray');
+			this.updateDomText('#tip', 'You cannot intersect another ray');
 			break;
 		case ILL_DIAGONAL:
-			$('#tip').html('You cannot draw more than ' + model.DIAG_MAX + ' diagonal rays');
+			this.updateDomText('#tip', 'You cannot draw more than ' + model.DIAG_MAX + ' diagonal rays');
 			break;
 		case ILL_MIN:
-			$('#tip').html('You cannot draw a continuing ray shorter than ' + model.CONT_MIN + ' squares long');
+			this.updateDomText('#tip', 'You cannot draw a continuing ray shorter than ' + model.CONT_MIN + ' squares long');
 			break;
 		case ILL_DIRECTION:
-			$('#tip').html('You cannot draw a ray in that direction');
+			this.updateDomText('#tip', 'You cannot draw a ray in that direction');
 			break;
 		case -1:
 			if (model.gameOver())
 				if (model.turn == -(model.states.length + 1))
-					$('#tip').html('Please start a new game!');
+					this.updateDomText('#tip', 'Please start a new game!');
 				else
-					$('#tip').html(names[-model.turn - 1] + ' won the game!');
+					this.updateDomText('#tip', names[-model.turn - 1] + ' won the game!');
 			else
-				$('#tip').html('&nbsp;');
+				this.updateDomText('#tip', '&nbsp;');
 			break;
 	}
 };
@@ -379,12 +396,11 @@ View.prototype.render = function($canvas, ctx, model, controller) {
 $(document).ready(function() {
 	var $canvas = $('#game');
 	var model = new Model();
-
-	for (var player = 0; player < model.states.length; player++)
-		$('#clock' + player).text(model.getTime(player));
-
 	var view = new View();
 	var controller = new Controller($canvas, model, view);
+
+	for (var player = 0; player < model.states.length; player++)
+		view.updateDomText('#clock' + player, model.getTime(player));
 
 	var ctx = $canvas[0].getContext('2d');
 	view.makeCameraInvertible(ctx);

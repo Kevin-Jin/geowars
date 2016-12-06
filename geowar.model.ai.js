@@ -77,12 +77,12 @@ Model.prototype.botTurn = function() {
 		while (this.checkLegality() == LEGAL) {
 			var moveHash = this.candidate[0] + '-' + this.candidate[1];
 			if (moveHash in opponentMoves)
-				blocked += 1;
+				blocked++;
 
 			var a = this.candidate[0] - lastOpp[0];
 			var b = this.candidate[1] - lastOpp[1];
 
-			var distance = Math.sqrt( a*a + b*b );
+			var distance = Math.sqrt(a * a + b * b);
 
 			// Prioritize moves that block the most.
 			if (blocked > mostBlocked) {
@@ -120,7 +120,7 @@ Model.prototype.botTurn = function() {
 			this.candidate[0] += direction[0];
 			this.candidate[1] += direction[1];
 
-			myMoves += 1;
+			myMoves++;
 		}
 	}
 	this.states[this.turn].pop();
@@ -135,7 +135,7 @@ Model.prototype.botTurn = function() {
 		this.candidate = [ lastOpp[0] + direction[0], lastOpp[1] + direction[1] ];
 
 		if (this.checkLegality() == ILL_MIN) // If Continuing Line, jump by min dist.
-			this.candidate = [lastOpp[0] + this.CONT_MIN * direction[0], lastOpp[1] + this.CONT_MIN * direction[1]];
+			this.candidate = [ lastOpp[0] + this.CONT_MIN * direction[0], lastOpp[1] + this.CONT_MIN * direction[1] ];
 
 		// Go in each direction.
 		while (this.checkLegality() == LEGAL && this.candidate[0] != best[0] && this.candidate[1] != best[1]) {
@@ -143,7 +143,7 @@ Model.prototype.botTurn = function() {
 			this.candidate[0] += direction[0];
 			this.candidate[1] += direction[1];
 
-			theirMoves += 1;
+			theirMoves++;
 		}
 	}
 	this.states[this.turn].pop();
