@@ -2,6 +2,9 @@ var squareSize = 6;
 var colors = [ 'red', 'blue' ];
 var names = [ 'Player 1', 'Player 2' ];
 
+// TODO: highlight row and column of candidate
+//  for better awareness of position relative
+//  to opponent.
 var Controller = function($canvas, model, view) {
 	var controller = this;
 	controller.mousePos = [ -1, -1 ];
@@ -20,17 +23,155 @@ var Controller = function($canvas, model, view) {
 		controller.mousePos[1] = e.clientY - rect.top - parseInt($canvas.css('border-top-width')) - parseInt($canvas.css('padding-top'));
 		controller.mousePos[1] *= $canvas[0].height / $canvas.height();
 	});
-
 	$canvas.on('contextmenu', function(e) {
 		return false;
 	});
-
 	$canvas.on('mousedown', function(e) {
 		controller.mouseBtn[e.which - 1] = true;
 	});
-
 	$(document).on('mouseup', function(e) {
 		controller.mouseBtn[e.which - 1] = false;
+	});
+
+	$(document).on('keypress', function(e) {
+		if (model.gameOver() || $('*:focus').length)
+			return;
+
+		var last = model.getPlayerLastMove(), dir, now;
+		if (model.candidate == null) {
+			dir = DIR_NONE;
+			now = last;
+		} else {
+			dir = model.getRayDirection();
+			now = model.candidate;
+		}
+		switch (e.which) {
+			case 'w'.charCodeAt(0):
+			case 'W'.charCodeAt(0):
+				if (model.candidate != null && model.getRayLength() >= Math.max(last[0], last[1], gridWidth - 1 - last[0], gridWidth - 1 - last[1]))
+					return;
+				switch (dir) {
+					case DIR_NONE:
+						model.candidate = [ now[0], now[1] - 1 ];
+						break;
+					case DIR_VERTICAL:
+						model.candidate = [ now[0], now[1] + Math.sign(now[1] - last[1]) ];
+						break;
+					case DIR_HORIZONTAL:
+						model.candidate = [ now[0] + Math.sign(now[0] - last[0]), now[1] ];
+						break;
+					case DIR_RDIAGONAL:
+					case DIR_LDIAGONAL:
+						model.candidate = [ now[0] + Math.sign(now[0] - last[0]), now[1] + Math.sign(now[1] - last[1]) ];
+						break;
+				}
+				model.candidate[2] = model.checkLegality();
+				break;
+			case 's'.charCodeAt(0):
+			case 'S'.charCodeAt(0):
+				switch (dir) {
+					case DIR_NONE:
+						model.candidate = [ now[0], now[1] + 1 ];
+						break;
+					case DIR_VERTICAL:
+						model.candidate = [ now[0], now[1] - Math.sign(now[1] - last[1]) ];
+						break;
+					case DIR_HORIZONTAL:
+						model.candidate = [ now[0] - Math.sign(now[0] - last[0]), now[1] ];
+						break;
+					case DIR_RDIAGONAL:
+					case DIR_LDIAGONAL:
+						model.candidate = [ now[0] - Math.sign(now[0] - last[0]), now[1] - Math.sign(now[1] - last[1]) ];
+						break;
+				}
+				model.candidate[2] = model.checkLegality();
+				break;
+			case 'a'.charCodeAt(0):
+			case 'A'.charCodeAt(0):
+				switch (dir) {
+					case DIR_NONE:
+						model.candidate = [ now[0] - 1, now[1] ];
+						break;
+					case DIR_VERTICAL:
+					case DIR_LDIAGONAL:
+						model.candidate = [ now[0] + (now[1] - last[1]), now[1] ];
+						break;
+					case DIR_HORIZONTAL:
+					case DIR_RDIAGONAL:
+						model.candidate = [ now[0], now[1] - (now[0] - last[0]) ];
+						break;
+				}
+				model.candidate[2] = model.checkLegality();
+				break;
+			case 'd'.charCodeAt(0):
+			case 'D'.charCodeAt(0):
+				switch (dir) {
+					case DIR_NONE:
+						model.candidate = [ now[0] + 1, now[1] ];
+						break;
+					case DIR_VERTICAL:
+					case DIR_RDIAGONAL:
+						model.candidate = [ now[0] - (now[1] - last[1]), now[1] ];
+						break;
+					case DIR_HORIZONTAL:
+					case DIR_LDIAGONAL:
+						model.candidate = [ now[0], now[1] + (now[0] - last[0]) ];
+						break;
+				}
+				model.candidate[2] = model.checkLegality();
+				break;
+			case 'q'.charCodeAt(0):
+			case 'Q'.charCodeAt(0):
+				switch (dir) {
+					case DIR_NONE:
+						model.candidate = [ now[0] - 1, now[1] - 1 ];
+						break;
+				}
+				model.candidate[2] = model.checkLegality();
+				break;
+			case 'e'.charCodeAt(0):
+			case 'E'.charCodeAt(0):
+				switch (dir) {
+					case DIR_NONE:
+						model.candidate = [ now[0] + 1, now[1] - 1 ];
+						break;
+				}
+				model.candidate[2] = model.checkLegality();
+				break;
+			case 'z'.charCodeAt(0):
+			case 'Z'.charCodeAt(0):
+				switch (dir) {
+					case DIR_NONE:
+						model.candidate = [ now[0] - 1, now[1] + 1 ];
+						break;
+				}
+				model.candidate[2] = model.checkLegality();
+				break;
+			case 'c'.charCodeAt(0):
+			case 'C'.charCodeAt(0):
+				switch (dir) {
+					case DIR_NONE:
+						model.candidate = [ now[0] + 1, now[1] + 1 ];
+						break;
+				}
+				model.candidate[2] = model.checkLegality();
+				break;
+			case 'x'.charCodeAt(0):
+			case 'X'.charCodeAt(0):
+				switch (dir) {
+					case DIR_NONE:
+						model.candidate = [ now[0], now[1] + 1 ];
+						break;
+				}
+				model.candidate[2] = model.checkLegality();
+				break;
+			case ' '.charCodeAt(0):
+				model.selectCandidate();
+				break;
+			default:
+				return;
+		}
+		return false;
 	});
 
 	var lineHeight = $('#lineheight').outerHeight();
@@ -61,6 +202,7 @@ var Controller = function($canvas, model, view) {
 
 		for (var player = 0; player < model.states.length; player++) {
 			names[player] = $('#enterplayername' + player).val();
+			$('#enterplayername' + player).blur();
 			view.updateDomText('#playername' + player, names[player] + ':');
 			view.updateDomText('#clock' + player, model.getTime(player));
 		}
@@ -128,16 +270,13 @@ Controller.prototype.beginFrame = function($canvas, ctx, model) {
 	var pt = ctx.transformedPoint(this.mousePos);
 	var i = Math.floor(pt[0] / squareSize);
 	var j = Math.floor(pt[1] / squareSize);
-	if (i >= 0 && j >= 0 && i < gridWidth && j < gridHeight && !model.gameOver()) {
-		model.updateCandidate([ i, j ]);
+	if (this.hoverSquare == null || i != this.hoverSquare[0] || j != this.hoverSquare[1]) {
+		if (i >= 0 && j >= 0 && i < gridWidth && j < gridHeight && !model.gameOver()) {
+			model.updateCandidate([ i, j ]);
+			if (!customCursor)
+				$canvas.css('cursor', 'pointer');
+		}
 		this.hoverSquare = [ i, j ];
-		if (!customCursor)
-			$canvas.css('cursor', 'pointer');
-	} else {
-		model.updateCandidate(null);
-		this.hoverSquare = null;
-		if (!customCursor)
-			$canvas.css('cursor', 'grab');
 	}
 
 	// If Bot is set choose position if your turn.
@@ -279,7 +418,7 @@ View.prototype.render = function($canvas, ctx, model, controller) {
 		// Any continuous non-negative periodic function will do, even sin(t)+1.
 		ctx.globalAlpha = Math.abs(2 * (maxAlpha - minAlpha) * (t * freq % 1000 / 1000 - 0.5)) + minAlpha;
 		if (now[2] == LEGAL)
-			ctx.fillStyle = 'limegreen';
+			ctx.fillStyle = colors[model.turn];
 		else
 			ctx.fillStyle = 'yellow';
 		ctx.beginPath();
@@ -377,6 +516,9 @@ View.prototype.render = function($canvas, ctx, model, controller) {
 			break;
 		case ILL_MIN:
 			this.updateDomText('#tip', 'You cannot draw a continuing ray shorter than ' + model.CONT_MIN + ' squares long');
+			break;
+		case ILL_OOB:
+			this.updateDomText('#tip', 'You cannot draw a ray that leaves the grid');
 			break;
 		case ILL_DIRECTION:
 			this.updateDomText('#tip', 'You cannot draw a ray in that direction');

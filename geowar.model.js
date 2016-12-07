@@ -4,8 +4,6 @@ var ILL_BLOCKED = 1;
 var ILL_DIAGONAL = 2;
 var ILL_DIRECTION = 3;
 var ILL_MIN = 4;
-
-// Only used by AI.
 var ILL_OOB = 5;
 
 var DIR_INVALID = -2;
