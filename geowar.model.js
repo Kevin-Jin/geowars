@@ -20,7 +20,7 @@ var Model = function() {
 	this.TIME_LIMIT = 120;
 
 	this.reset();
-	// Create a dead game.
+	// Signal an untouched game.
 	this.turn = -(this.states.length + 1);
 	this.states = [ [], [], ];
 
@@ -30,6 +30,10 @@ var Model = function() {
 
 Model.prototype.gameOver = function() {
 	return this.turn < 0;
+};
+
+Model.prototype.isUntouched = function() {
+	return this.turn == -(this.states.length + 1);
 };
 
 Model.prototype.saveScore = function() {
@@ -63,7 +67,7 @@ Model.prototype.saveScore = function() {
 Model.prototype.reset = function() {
 	this.states = [ [ [ Math.floor(gridWidth / 2), Math.floor(gridHeight / 2) - 1] ], [ [ Math.floor(gridWidth / 2), Math.floor(gridHeight / 2)] ] ];
 	this.turn = 0;
-	this.candidate = null;
+	this.candidate = this.getPlayerLastMove().slice(0, 2);
 	this.diagonals = [ 0, 0 ];
 	this.direction = [ DIR_NONE, DIR_NONE ];
 	this.time = [ this.TIME_LIMIT, this.TIME_LIMIT ];
@@ -86,8 +90,8 @@ Model.prototype.updateTime = function(t) {
 	if (this.time[this.turn] <= 0) {
 		this.time[this.turn] = 0;
 
-		// Ajax query to save score.
 		this.turn = -((this.turn + 1) % this.states.length + 1);
+		this.candidate = null;
 		this.saveScore();
 	}
 };
@@ -295,9 +299,11 @@ Model.prototype.selectCandidate = function() {
 
 	if (!hasValidMove(this)) {
 		this.turn = -((this.turn + 1) % this.states.length + 1);
+		this.candidate = null;
 		this.saveScore();
+	} else {
+		this.candidate = this.getPlayerLastMove().slice(0, 2);
 	}
-	this.candidate = null;
 
 	return true;
 };

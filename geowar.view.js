@@ -103,7 +103,7 @@ View.prototype.render = function($canvas, ctx, model) {
 	ctx.fill();
 
 	// Color in squares.
-	if (model.turn != -(model.states.length + 1)) {
+	if (!model.isUntouched()) {
 		for (var player = 0; player < model.states.length; player++) {
 			var history = model.states[player];
 			var last = history[0];
@@ -161,17 +161,30 @@ View.prototype.render = function($canvas, ctx, model) {
 		var freq = 0.8, minAlpha = 0.25, maxAlpha = 1;
 		// Any continuous non-negative periodic function will do, even sin(t)+1.
 		ctx.globalAlpha = Math.abs(2 * (maxAlpha - minAlpha) * (t * freq % 1000 / 1000 - 0.5)) + minAlpha;
+
 		ctx.strokeStyle = 'white';
 		ctx.beginPath();
 		renderSquare(last);
 		ctx.stroke();
+		// Draw crosshairs when game to aid player in lining up rays against opponent.
+		ctx.beginPath();
+		ctx.moveTo(0, ctx.lineWidth / 2 + now[1] * squareSize);
+		ctx.lineTo(ctx.lineWidth + squareSize * gridWidth, ctx.lineWidth / 2 + now[1] * squareSize);
+		ctx.moveTo(0, ctx.lineWidth / 2 + (now[1] + 1) * squareSize);
+		ctx.lineTo(ctx.lineWidth + squareSize * gridWidth, ctx.lineWidth / 2 + (now[1] + 1) * squareSize);
+		ctx.moveTo(ctx.lineWidth / 2 + now[0] * squareSize, 0);
+		ctx.lineTo(ctx.lineWidth / 2 + now[0] * squareSize, ctx.lineWidth + squareSize * gridHeight);
+		ctx.moveTo(ctx.lineWidth / 2 + (now[0] + 1) * squareSize, 0);
+		ctx.lineTo(ctx.lineWidth / 2 + (now[0] + 1) * squareSize, ctx.lineWidth + squareSize * gridHeight);
+		ctx.stroke();
+
 		ctx.globalAlpha = 1;
 
 		model.updateTime(t);
 		this.updateDomText('#clock' + model.turn, model.getTime());
 	} else {
 		var text = 'Are you ready?';
-		if (model.turn != -(model.states.length + 1)) {
+		if (!model.isUntouched()) {
 			ctx.strokeStyle = 'white';
 			ctx.beginPath();
 			renderSquare(model.getPlayerLastMove(0));
@@ -184,12 +197,15 @@ View.prototype.render = function($canvas, ctx, model) {
 
 		var freeze = 2000, fadeOut = 500, initAlpha = 0.5;
 		if (this.gameEnd == -1)
-			if (model.turn == -(model.states.length + 1))
+			if (model.isUntouched())
+				// Never fade out "Are you ready?" message.
 				this.gameEnd = Infinity;
 			else
+				// Otherwise, fade out "Game over!" message after some time.
 				this.gameEnd = t;
 		if (t < this.gameEnd + freeze + fadeOut) {
 			ctx.save();
+			// Draw an overlay in pixel perfect coordinates.
 			ctx.setTransform(1, 0, 0, 1, 0, 0);
 			if (t < this.gameEnd + freeze)
 				ctx.globalAlpha = initAlpha;
@@ -236,7 +252,7 @@ View.prototype.render = function($canvas, ctx, model) {
 			break;
 		case -1:
 			if (model.gameOver())
-				if (model.turn == -(model.states.length + 1))
+				if (model.isUntouched())
 					this.updateDomText('#tip', 'Please start a new game!');
 				else
 					this.updateDomText('#tip', names[-model.turn - 1] + ' won the game!');
