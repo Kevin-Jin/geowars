@@ -9,6 +9,8 @@ var Controller = function($canvas, model, view) {
 	controller.rmbStart = null;
 	controller.hoverSquare = null;
 
+	// Listen on mouse events and store the most recent states for beginFrame()
+	//  to grab.
 	$(document).on('mousemove', function(e) {
 		var rect = $canvas[0].getBoundingClientRect();
 		controller.mousePos[0] = e.clientX - rect.left - parseInt($canvas.css('border-left-width')) - parseInt($canvas.css('padding-left'));
@@ -16,32 +18,41 @@ var Controller = function($canvas, model, view) {
 		controller.mousePos[1] = e.clientY - rect.top - parseInt($canvas.css('border-top-width')) - parseInt($canvas.css('padding-top'));
 		controller.mousePos[1] *= $canvas[0].height / $canvas.height();
 	});
-	$canvas.on('contextmenu', function(e) {
-		return false;
-	});
 	$canvas.on('mousedown', function(e) {
 		controller.mouseBtn[e.which - 1] = true;
 	});
 	$(document).on('mouseup', function(e) {
 		controller.mouseBtn[e.which - 1] = false;
 	});
+	var lineHeight = $('#lineheight').outerHeight();
+	$canvas.on('wheel', function(e) {
+		if (e.originalEvent.deltaMode == e.originalEvent.DOM_DELTA_LINE)
+			controller.mouseWhl += e.originalEvent.deltaY * lineHeight;
+		else if (e.originalEvent.deltaMode == e.originalEvent.DOM_DELTA_PIXEL)
+			controller.mouseWhl += e.originalEvent.deltaY;
+		e.preventDefault();
+	});
+	// Prevent menu from showing on right click.
+	$canvas.on('contextmenu', function(e) {
+		return false;
+	});
 
+	// Keyboard controls for raw drawing. Controlled radially to reduce number
+	//  of keystrokes needed: W to extend ray, S to retract ray, D to rotate ray
+	//  clockwise around current position, A to rotate ray counterclockwise
+	//  around current position, space to select.
 	$(document).on('keypress', function(e) {
+		// Don't take controls if game is over or a text box/button is in focus.
 		if (model.gameOver() || $('*:focus').length)
 			return;
 
-		var last = model.getPlayerLastMove(), dir, now;
-		if (model.candidate == null) {
-			dir = DIR_NONE;
-			now = last;
-		} else {
-			dir = model.getRayDirection();
-			now = model.candidate;
-		}
+		var last = model.getPlayerLastMove();
+		var dir = model.getRayDirection();
+		var now = model.candidate;
 		switch (e.which) {
 			case 'w'.charCodeAt(0):
 			case 'W'.charCodeAt(0):
-				if (model.candidate != null && model.getRayLength() >= Math.max(last[0], last[1], gridWidth - 1 - last[0], gridWidth - 1 - last[1]))
+				if (model.getRayLength() >= Math.max(last[0], last[1], gridWidth - 1 - last[0], gridWidth - 1 - last[1]))
 					return;
 				switch (dir) {
 					case DIR_NONE:
@@ -167,36 +178,34 @@ var Controller = function($canvas, model, view) {
 		return false;
 	});
 
-	var lineHeight = $('#lineheight').outerHeight();
-	$canvas.on('wheel', function(e) {
-		if (e.originalEvent.deltaMode == e.originalEvent.DOM_DELTA_LINE)
-			controller.mouseWhl += e.originalEvent.deltaY * lineHeight;
-		else if (e.originalEvent.deltaMode == e.originalEvent.DOM_DELTA_PIXEL)
-			controller.mouseWhl += e.originalEvent.deltaY;
-		e.preventDefault();
-	});
-
+	// Handle new game workflow.
 	$('#newgame').on('click', function(e) {
+		// Initialize text boxes to current player names.
 		for (var player = 0; player < model.states.length; player++)
 			$('#enterplayername' + player).val(names[player]);
+		// Play a transition.
 		$('#overlay').fadeIn(200);
+		// Focus on first player's name.
 		$('#enterplayername0').select();
 	});
 	$('body').keyup(function(e) {
+		// Hide the player names popup if ESC is pressed.
 		if ($('#overlay').css('display') !== 'none' && e.keyCode === 27)
 			$('#dimmer').trigger('click');
 	});
 	$('#dimmer').click(function() {
+		// Hide the player names popup if the background is clicked.
 		$('#overlay').fadeOut(100);
 	});
 	$('#nameform').on('submit', function(e) {
+		// Reset the state, update player names, type out the reset countdown.
 		view.reset();
 		model.reset();
 
 		for (var player = 0; player < model.states.length; player++) {
 			names[player] = $('#enterplayername' + player).val();
 			$('#enterplayername' + player).blur();
-			view.updateDomText('#playername' + player, names[player] + ':');
+			view.updateDomText('#playername' + player, names[player]);
 			view.updateDomText('#clock' + player, model.getTime(player));
 		}
 
@@ -204,7 +213,7 @@ var Controller = function($canvas, model, view) {
 		return false;
 	});
 
-	// Toggle Player Mode Buttons.
+	// Handle bot/human toggle buttons.
 	$('#redplayer').on('click', function(e) {
 		if (model.bot[0]) {
 			model.bot[0] = false;
@@ -214,7 +223,6 @@ var Controller = function($canvas, model, view) {
 			$('#redplayer').val('Bot');
 		}
 	});
-
 	$('#blueplayer').on('click', function(e) {
 		if (model.bot[1]) {
 			model.bot[1] = false;
@@ -264,13 +272,12 @@ Controller.prototype.beginFrame = function($canvas, ctx, model) {
 	var i = Math.floor(pt[0] / squareSize);
 	var j = Math.floor(pt[1] / squareSize);
 	if (this.hoverSquare == null || i != this.hoverSquare[0] || j != this.hoverSquare[1]) {
-		if (i >= 0 && j >= 0 && i < gridWidth && j < gridHeight && !model.gameOver()) {
+		if (i >= 0 && j >= 0 && i < gridWidth && j < gridHeight && !model.gameOver())
 			model.updateCandidate([ i, j ]);
-			if (!customCursor)
-				$canvas.css('cursor', 'pointer');
-		}
 		this.hoverSquare = [ i, j ];
 	}
+	if (!customCursor)
+		$canvas.css('cursor', 'pointer');
 
 	// If Bot is set choose position if your turn.
 	if (model.bot[model.turn])

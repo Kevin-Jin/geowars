@@ -1,4 +1,5 @@
 var gridWidth = 100, gridHeight = 100;
+
 var LEGAL = 0;
 var ILL_BLOCKED = 1;
 var ILL_DIAGONAL = 2;
@@ -14,25 +15,31 @@ var DIR_RDIAGONAL = 2;
 var DIR_LDIAGONAL = 3;
 
 var Model = function() {
-	// Min for continuing line.
+	// Minimum length of continuing line, in squares.
 	this.CONT_MIN = 10;
+	// Maximum number of diagonal rays each player can draw.
 	this.DIAG_MAX = 2;
+	// Countdown clock timeout, in seconds.
 	this.TIME_LIMIT = 120;
 
 	this.reset();
-	// Signal an untouched game.
+	// Initialize the game to the untouched state.
 	this.turn = -(this.states.length + 1);
+	// Candidate should benull whenever the game is inactive.
+	this.candidate = null;
+	// Don't fill in any squares for an untouched game.
 	this.states = [ [], [], ];
-
-	// Initialize Player Mode.
+	// Initialize player mode out of reset() so that New Game keeps the setting.
 	this.bot = [ false, false ];
 };
 
 Model.prototype.gameOver = function() {
+	// If this.turn is negative, then -(this.turn + 1) is the winning player.
 	return this.turn < 0;
 };
 
 Model.prototype.isUntouched = function() {
+	// Sentinel value that is not a valid winning player.
 	return this.turn == -(this.states.length + 1);
 };
 
@@ -65,13 +72,21 @@ Model.prototype.saveScore = function() {
 };
 
 Model.prototype.reset = function() {
+	// Start the two players in the middle of the grid.
 	this.states = [ [ [ Math.floor(gridWidth / 2), Math.floor(gridHeight / 2) - 1] ], [ [ Math.floor(gridWidth / 2), Math.floor(gridHeight / 2)] ] ];
 	this.turn = 0;
+	// Candidate should never be null while game is in play. Default it to the
+	//  previous move made by the player at the start of every turn but be sure
+	//  to copy rather than alias the move to avoid corrupting this.states.
 	this.candidate = this.getPlayerLastMove().slice(0, 2);
+	// Initialize the number of diagonal rays drawn for each player.
 	this.diagonals = [ 0, 0 ];
+	// Initialize the continuing ray state.
 	this.direction = [ DIR_NONE, DIR_NONE ];
+	// Initialize the countdown clock for each player.
 	this.time = [ this.TIME_LIMIT, this.TIME_LIMIT ];
 	this.lastTick = new Date().getTime();
+	// Initialize an empty grid and set the starting positions of each player.
 	this.grid = [ ];
 	for (var i = 0; i < gridHeight; i++) {
 		this.grid[i] = [ ];
@@ -82,29 +97,39 @@ Model.prototype.reset = function() {
 	this.grid[this.states[1][0][1]][this.states[1][0][0]] = 1;
 };
 
+Model.prototype.playerLost = function() {
+	// Set this.turn = -1 if this.turn == 0.
+	// Set this.turn = -2 if this.turn == -1.
+	this.turn = -((this.turn + 1) % this.states.length + 1);
+	// Candidate should be null whenever the game is inactive.
+	this.candidate = null;
+	this.saveScore();
+};
+
 Model.prototype.updateTime = function(t) {
+	// Remaining time is in seconds, t and this.lastTick is in milliseconds.
 	this.time[this.turn] -= (t - this.lastTick) / 1000;
 	this.lastTick = t;
 
 	// End game if time reaches 0.
 	if (this.time[this.turn] <= 0) {
 		this.time[this.turn] = 0;
-
-		this.turn = -((this.turn + 1) % this.states.length + 1);
-		this.candidate = null;
-		this.saveScore();
+		this.playerLost();
 	}
 };
 
 Model.prototype.getTime = function(p) {
+	// Default p to this.turn if calling this.getTime() with no arguments.
 	if (typeof p === 'undefined')
 		p = this.turn;
 
+	// Format countdown clock in mm:ss, padded by zeros and with no fraction.
 	var remaining = Math.round(this.time[p]);
 	return '0' + Math.floor(remaining / 60) + ':' + (remaining % 60 < 10 ? '0':'') + (remaining % 60);
 };
 
 Model.prototype.getPlayerLastMove = function(p) {
+	// Default p to this.turn if calling this.getPlayerLastMove() with no arguments.
 	if (typeof p === 'undefined')
 		p = this.turn;
 
@@ -112,7 +137,9 @@ Model.prototype.getPlayerLastMove = function(p) {
 };
 
 Model.prototype.getRayDirection = function(last, now) {
+	// Default last to this.getPlayerLastMove() if calling this.getRayDirection() with no arguments.
 	last = last || this.getPlayerLastMove();
+	// Default now to this.candidate() if calling this.getRayDirection() with fewer than 2 arguments.
 	now = now || this.candidate;
 	if (now[0] == last[0] && now[1] == last[1])
 		return DIR_NONE;
@@ -129,8 +156,11 @@ Model.prototype.getRayDirection = function(last, now) {
 };
 
 Model.prototype.getRayLength = function(last, now) {
+	// Default last to this.getPlayerLastMove() if calling this.getRayLength() with no arguments.
 	last = last || this.getPlayerLastMove();
+	// Default now to this.candidate() if calling this.getRayLength() with fewer than 2 arguments.
 	now = now || this.candidate;
+	// Under a legal move, either both are equal to each other or one is 0.
 	return Math.max(Math.abs(now[0] - last[0]), Math.abs(now[1] - last[1]));
 };
 
@@ -142,10 +172,11 @@ Model.prototype.checkLegality = function() {
 	var now = this.candidate;
 	var dir = this.getRayDirection(last, now);
 
-	// Check if out of bounds for AI.
+	// Check if candidate is out of bounds.
 	if (now[0] < 0 || now[0] >= gridWidth || now[1] < 0 || now[1] >= gridHeight)
 		return ILL_OOB;
 
+	// Check if candidate violates the ray intersection restriction.
 	if (dir == DIR_NONE) {
 		return ILL_BLOCKED;
 	} else if (dir == DIR_VERTICAL) {
@@ -161,6 +192,7 @@ Model.prototype.checkLegality = function() {
 			if (this.grid[last[1] + j][last[0] + j] != -1)
 				return ILL_BLOCKED;
 
+		// Check if candidate violates the diagonal ray restriction.
 		if (this.diagonals[this.turn] >= this.DIAG_MAX)
 			return ILL_DIAGONAL;
 	} else if (dir == DIR_LDIAGONAL) {
@@ -168,13 +200,14 @@ Model.prototype.checkLegality = function() {
 			if (this.grid[last[1] - j][last[0] + j] != -1)
 				return ILL_BLOCKED;
 
+		// Check if candidate violates the diagonal ray restriction.
 		if (this.diagonals[this.turn] >= this.DIAG_MAX)
 			return ILL_DIAGONAL;
 	} else {
 		return ILL_DIRECTION;
 	}
 
-	// Continuing line.
+	// Check if candidate violates the continuing ray restriction.
 	if (this.direction[this.turn] == dir && this.getRayLength(last, now) < this.CONT_MIN)
 		return ILL_MIN;
 
@@ -184,11 +217,12 @@ Model.prototype.checkLegality = function() {
 Model.prototype.updateCandidate = function(hoverSquare) {
 	var TOLERANCE = Math.PI / 8;
 
-	if (hoverSquare == null || this.gameOver()) {
+	if (this.gameOver()) {
 		this.candidate = null;
 		return;
 	}
-	if (this.candidate != null && hoverSquare[0] == this.candidate[0] && hoverSquare[1] == this.candidate[1])
+	// If mouse has not been moved, no need to perform any calculations.
+	if (hoverSquare[0] == this.candidate[0] && hoverSquare[1] == this.candidate[1])
 		return;
 
 	var last = this.getPlayerLastMove();
@@ -236,15 +270,19 @@ Model.prototype.updateCandidate = function(hoverSquare) {
 		return;
 	}
 
+	// Make sure all our logic is consistent.
 	if (this.getRayLength(last) != 0 && this.getRayDirection(last) != dir) {
 		console.log(this.getRayDirection(last) + " " + dir);
 		throw new Error('Assert failed: this.getRayDirection() != dir');
 	}
 
+	// this.selectCandidate() will check the legality flag on the candidate
+	//  before it draws a ray.
 	this.candidate[2] = this.checkLegality();
 };
 
 Model.prototype.selectCandidate = function() {
+	// Helper method that returns false if the current player has lost.
 	function hasValidMove(model) {
 		var last = model.getPlayerLastMove();
 		for (var dx = -1; dx <= +1; dx++) {
@@ -271,9 +309,12 @@ Model.prototype.selectCandidate = function() {
 		return false;
 	}
 
-	if (this.candidate == null || this.candidate[2] != LEGAL || this.gameOver())
+	// Refuse to select the candidate if it is not a legal move.
+	if (this.gameOver() || this.candidate[2] != LEGAL)
 		return false;
 
+	// Keep track of grid so we can check for ray intersections without having
+	//  to rebuild the grid from this.states every time.
 	var last = this.getPlayerLastMove();
 	var now = this.candidate;
 	var dir = this.getRayDirection(last, now);
@@ -293,17 +334,16 @@ Model.prototype.selectCandidate = function() {
 			this.grid[last[1] - j][last[0] + j] = this.turn;
 	}
 
+	// Save the direction made in this ray draw to check for continuing rays.
 	this.direction[this.turn] = dir;
 	this.states[this.turn].push(this.candidate);
 	this.turn = (this.turn + 1) % this.states.length;
 
-	if (!hasValidMove(this)) {
-		this.turn = -((this.turn + 1) % this.states.length + 1);
-		this.candidate = null;
-		this.saveScore();
-	} else {
+	// End the game or reset the candidate for the next player.
+	if (!hasValidMove(this))
+		this.playerLost();
+	else
 		this.candidate = this.getPlayerLastMove().slice(0, 2);
-	}
 
 	return true;
 };
